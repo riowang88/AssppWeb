@@ -43,7 +43,7 @@ export default function AdminAccountDetail() {
         account.email,
         account.password,
         needsCode && code ? code : undefined,
-        account.cookies,
+        undefined,
         account.deviceIdentifier,
       );
       await saveAccount(renewed);
