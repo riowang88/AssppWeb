@@ -44,6 +44,16 @@ export async function fetchBag(deviceId: string): Promise<BagOutput> {
       return { authURL: defaultAuthURL };
     }
 
+    // Apple's bag now returns the new SRP/GSA endpoint (/auth/v1/native)
+    // which expects a completely different protocol. Our code uses the legacy
+    // MZFinance plist protocol, so we must ignore the new endpoint.
+    if (authURL.includes("/auth/v1/")) {
+      console.warn(
+        "[Bag] authenticateAccount points to SRP endpoint, using legacy MZFinance endpoint",
+      );
+      return { authURL: defaultAuthURL };
+    }
+
     return { authURL };
   } catch (error) {
     console.warn(
