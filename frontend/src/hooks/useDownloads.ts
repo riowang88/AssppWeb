@@ -14,7 +14,11 @@ export function useDownloads() {
     resumeDownload,
     deleteDownload,
   } = useDownloadsStore();
-  const { accounts } = useAccounts();
+  const { accounts, loadAccounts } = useAccounts();
+
+  useEffect(() => {
+    loadAccounts();
+  }, [loadAccounts]);
   const hashesRef = useRef("");
   const [hashToEmail, setHashToEmail] = useState<Record<string, string>>({});
 

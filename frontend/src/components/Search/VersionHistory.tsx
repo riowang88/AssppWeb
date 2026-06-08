@@ -15,7 +15,7 @@ import type { Software, VersionMetadata } from "../../types";
 export default function VersionHistory() {
   const { appId } = useParams<{ appId: string }>();
   const location = useLocation();
-  const { accounts, updateAccount } = useAccounts();
+  const { accounts, updateCookies, getDownloadContext } = useAccounts();
   const { t } = useTranslation();
   const addToast = useToastStore((s) => s.addToast);
   const { startDownload, toastDownloadError } = useDownloadAction();
@@ -57,9 +57,10 @@ export default function VersionHistory() {
     if (!account || !app) return;
     setLoading(true);
     try {
-      const result = await listVersions(account, app);
+      const fullAccount = await getDownloadContext(account.email);
+      const result = await listVersions(fullAccount, app);
       setVersions(result.versions);
-      await updateAccount({ ...account, cookies: result.updatedCookies });
+      await updateCookies(account.email, result.updatedCookies);
     } catch (e) {
       addToast(getErrorMessage(e, t("search.versions.loadFailed")), "error");
     } finally {
@@ -71,9 +72,10 @@ export default function VersionHistory() {
     if (!account || !app || versionMeta[versionId]) return;
     setLoadingMeta((prev) => ({ ...prev, [versionId]: true }));
     try {
-      const result = await getVersionMetadata(account, app, versionId);
+      const fullAccount = await getDownloadContext(account.email);
+      const result = await getVersionMetadata(fullAccount, app, versionId);
       setVersionMeta((prev) => ({ ...prev, [versionId]: result.metadata }));
-      await updateAccount({ ...account, cookies: result.updatedCookies });
+      await updateCookies(account.email, result.updatedCookies);
     } catch {
       // Silently fail for individual version metadata
     } finally {
@@ -85,9 +87,10 @@ export default function VersionHistory() {
     if (!account || !app) return;
     setDownloadingVersion(versionId);
     try {
-      await startDownload(account, app, versionId);
+      const fullAccount = await getDownloadContext(account.email);
+      await startDownload(fullAccount, app, versionId);
     } catch (e) {
-      toastDownloadError(account, app, e);
+      if (account) toastDownloadError(account, app, e);
     } finally {
       setDownloadingVersion(null);
     }

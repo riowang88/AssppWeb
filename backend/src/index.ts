@@ -5,6 +5,7 @@ import fs from "fs";
 import { config } from "./config.js";
 import { httpsRedirect } from "./middleware/httpsRedirect.js";
 import { accessAuth } from "./middleware/accessAuth.js";
+import { adminAuth } from "./middleware/adminAuth.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { setupWsProxy } from "./services/wsProxy.js";
 import authRoutes from "./routes/auth.js";
@@ -14,6 +15,8 @@ import packageRoutes from "./routes/packages.js";
 import installRoutes from "./routes/install.js";
 import settingsRoutes from "./routes/settings.js";
 import bagRoutes from "./routes/bag.js";
+import adminRoutes from "./routes/admin.js";
+import accountsRoutes from "./routes/accounts.js";
 
 const app = express();
 
@@ -30,6 +33,9 @@ app.use("/api", packageRoutes);
 app.use("/api", installRoutes);
 app.use("/api", settingsRoutes);
 app.use("/api", bagRoutes);
+app.use("/api", accountsRoutes);
+app.use("/api/admin", adminAuth);
+app.use("/api/admin", adminRoutes);
 
 // Serve static frontend files
 const publicDir = path.resolve(import.meta.dirname, "../public");

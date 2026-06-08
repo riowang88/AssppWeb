@@ -1,22 +1,18 @@
-import { useTranslation } from "react-i18next";
-import { useAccounts } from "./useAccounts";
-import { useToastStore } from "../store/toast";
-import { useDownloadsStore } from "../store/downloads";
-import { getDownloadInfo } from "../apple/download";
-import { purchaseApp } from "../apple/purchase";
-import { authenticate } from "../apple/authenticate";
-import { apiPost, apiGet } from "../api/client";
-import { accountHash } from "../utils/account";
-import { getErrorMessage } from "../utils/error";
-import { getAccountContext } from "../utils/toast";
-import type { Account, Software } from "../types";
+import { useTranslation } from 'react-i18next';
+import { useAccounts } from './useAccounts';
+import { useToastStore } from '../store/toast';
+import { useDownloadsStore } from '../store/downloads';
+import { getDownloadInfo } from '../apple/download';
+import { purchaseApp } from '../apple/purchase';
+import { authenticate } from '../apple/authenticate';
+import { apiGet, apiPost } from '../api/client';
+import { accountHash } from '../utils/account';
+import { getErrorMessage } from '../utils/error';
+import { getAccountContext } from '../utils/toast';
+import type { Account, AccountSummary, Software } from '../types';
 
-/**
- * Shared hook for download & purchase actions.
- * Eliminates the duplicated flow across ProductDetail, VersionHistory, and AddDownload.
- */
 export function useDownloadAction() {
-  const { updateAccount } = useAccounts();
+  const { getDownloadContext, updateCookies } = useAccounts();
   const addToast = useToastStore((s) => s.addToast);
   const fetchTasks = useDownloadsStore((s) => s.fetchTasks);
   const { t } = useTranslation();
@@ -30,18 +26,18 @@ export function useDownloadAction() {
     const appName = app.name;
 
     try {
-      const settings = await apiGet<{ maxDownloadMB: number }>("/api/settings");
+      const settings = await apiGet<{ maxDownloadMB: number }>('/api/settings');
       if (settings.maxDownloadMB > 0 && app.fileSizeBytes) {
         const sizeMB = parseInt(app.fileSizeBytes, 10) / (1024 * 1024);
         if (sizeMB > settings.maxDownloadMB) {
           addToast(
-            t("toast.downloadLimit.message", {
+            t('toast.downloadLimit.message', {
               appName,
               size: sizeMB.toFixed(2),
               limit: settings.maxDownloadMB,
             }),
-            "error",
-            t("toast.title.downloadLimit"),
+            'error',
+            t('toast.title.downloadLimit'),
           );
           return;
         }
@@ -55,10 +51,10 @@ export function useDownloadAction() {
       app,
       versionId,
     );
-    await updateAccount({ ...account, cookies: updatedCookies });
+    await updateCookies(account.email, updatedCookies);
     const hash = await accountHash(account);
 
-    await apiPost("/api/downloads", {
+    await apiPost('/api/downloads', {
       software: { ...app, version: output.bundleShortVersionString },
       accountHash: hash,
       downloadURL: output.downloadURL,
@@ -69,9 +65,9 @@ export function useDownloadAction() {
     fetchTasks();
 
     addToast(
-      t("toast.msg", { appName, ...ctx }),
-      "info",
-      t("toast.title.downloadStarted"),
+      t('toast.msg', { appName, ...ctx }),
+      'info',
+      t('toast.title.downloadStarted'),
     );
   }
 
@@ -79,9 +75,6 @@ export function useDownloadAction() {
     const ctx = getAccountContext(account, t);
     const appName = app.name;
 
-    // Silently renew the password token before purchasing.
-    // This prevents "token expired" (2034/2042) errors that would
-    // otherwise require the user to manually re-authenticate.
     let currentAccount = account;
     try {
       const renewed = await authenticate(
@@ -91,51 +84,52 @@ export function useDownloadAction() {
         account.cookies,
         account.deviceIdentifier,
       );
-      await updateAccount(renewed);
+      await updateCookies(renewed.email, renewed.cookies);
       currentAccount = renewed;
     } catch {
       // Ignore — proceed with existing token
     }
 
     const result = await purchaseApp(currentAccount, app);
-    await updateAccount({ ...currentAccount, cookies: result.updatedCookies });
+    await updateCookies(currentAccount.email, result.updatedCookies);
 
     addToast(
-      t("toast.msg", { appName, ...ctx }),
-      "success",
-      t("toast.title.licenseSuccess"),
+      t('toast.msg', { appName, ...ctx }),
+      'success',
+      t('toast.title.licenseSuccess'),
     );
   }
 
-  function toastDownloadError(account: Account, app: Software, error: unknown) {
+  function toastDownloadError(account: Account | AccountSummary, app: Software, error: unknown) {
     const ctx = getAccountContext(account, t);
     addToast(
-      t("toast.msgFailed", {
+      t('toast.msgFailed', {
         appName: app.name,
         ...ctx,
-        error: getErrorMessage(error, t("toast.title.downloadFailed")),
+        error: getErrorMessage(error, t('toast.title.downloadFailed')),
       }),
-      "error",
-      t("toast.title.downloadFailed"),
+      'error',
+      t('toast.title.downloadFailed'),
     );
   }
 
-  function toastLicenseError(account: Account, app: Software, error: unknown) {
+  function toastLicenseError(account: Account | AccountSummary, app: Software, error: unknown) {
     const ctx = getAccountContext(account, t);
     addToast(
-      t("toast.msgFailed", {
+      t('toast.msgFailed', {
         appName: app.name,
         ...ctx,
-        error: getErrorMessage(error, t("toast.title.licenseFailed")),
+        error: getErrorMessage(error, t('toast.title.licenseFailed')),
       }),
-      "error",
-      t("toast.title.licenseFailed"),
+      'error',
+      t('toast.title.licenseFailed'),
     );
   }
 
   return {
     startDownload,
     acquireLicense,
+    getDownloadContext,
     toastDownloadError,
     toastLicenseError,
   };

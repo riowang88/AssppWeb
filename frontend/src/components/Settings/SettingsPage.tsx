@@ -1,13 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import PageContainer from "../Layout/PageContainer";
-import Modal from "../common/Modal";
-import { useAccountsStore } from "../../store/accounts";
 import { useToastStore } from "../../store/toast";
 import { apiGet } from "../../api/client";
-import { encryptData, decryptData } from "../../utils/crypto";
 import { countryCodeMap } from "../../apple/config";
-import type { Account } from "../../types";
 
 interface ServerInfo {
   uptime?: number;
@@ -30,7 +26,6 @@ const entityTypes = [
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
-  const { accounts, addAccount, updateAccount } = useAccountsStore();
   const addToast = useToastStore((s) => s.addToast);
 
   const [country, setCountry] = useState(
@@ -40,19 +35,6 @@ export default function SettingsPage() {
     () => localStorage.getItem("asspp-default-entity") || "software",
   );
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
-
-  const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [exportPassword, setExportPassword] = useState("");
-  const [exportConfirmPassword, setExportConfirmPassword] = useState("");
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [importModalOpen, setImportModalOpen] = useState(false);
-  const [importPassword, setImportPassword] = useState("");
-  const [importFileData, setImportFileData] = useState("");
-
-  const [conflictModalOpen, setConflictModalOpen] = useState(false);
-  const [pendingAccounts, setPendingAccounts] = useState<Account[]>([]);
-  const [conflictStats, setConflictStats] = useState({ conflict: 0, new: 0 });
 
   useEffect(() => {
     localStorage.setItem("asspp-default-country", country);
@@ -71,106 +53,6 @@ export default function SettingsPage() {
   const sortedCountries = Object.keys(countryCodeMap).sort((a, b) =>
     t(`countries.${a}`, a).localeCompare(t(`countries.${b}`, b)),
   );
-
-  const handleExport = async () => {
-    if (exportPassword !== exportConfirmPassword) {
-      addToast(t("settings.data.passwordMismatch"), "error");
-      return;
-    }
-    try {
-      const encrypted = await encryptData(accounts, exportPassword);
-      const blob = new Blob([encrypted], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "asspp-accounts.enc";
-      a.click();
-      URL.revokeObjectURL(url);
-
-      setExportModalOpen(false);
-      setExportPassword("");
-      setExportConfirmPassword("");
-      addToast(t("settings.data.exportSuccess"), "success");
-    } catch {
-      addToast(t("settings.data.exportFailed"), "error");
-    }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      setImportFileData(content);
-      setImportModalOpen(true);
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  };
-
-  const handleImport = async () => {
-    try {
-      const parsed = await decryptData(importFileData, importPassword);
-      if (!Array.isArray(parsed)) throw new Error("Invalid format");
-      const valid = parsed.filter(
-        (item: any) =>
-          item &&
-          typeof item === "object" &&
-          typeof item.email === "string" &&
-          item.email.length > 0,
-      ) as Account[];
-      if (valid.length === 0) throw new Error("No valid accounts found");
-
-      if (accounts.length === 0) {
-        for (const acc of valid) {
-          await addAccount(acc);
-        }
-        addToast(t("settings.data.importSuccess"), "success");
-        setImportModalOpen(false);
-        setImportPassword("");
-      } else {
-        let conflictCount = 0;
-        let newCount = 0;
-        valid.forEach((imported) => {
-          if (accounts.some((a) => a.email === imported.email)) conflictCount++;
-          else newCount++;
-        });
-
-        if (conflictCount > 0) {
-          setConflictStats({ conflict: conflictCount, new: newCount });
-          setPendingAccounts(valid);
-          setImportModalOpen(false);
-          setImportPassword("");
-          setConflictModalOpen(true);
-        } else {
-          for (const acc of valid) {
-            await addAccount(acc);
-          }
-          addToast(t("settings.data.importSuccess"), "success");
-          setImportModalOpen(false);
-          setImportPassword("");
-        }
-      }
-    } catch {
-      addToast(t("settings.data.incorrectPassword"), "error");
-    }
-  };
-
-  const handleResolveConflict = async (overwrite: boolean) => {
-    for (const imported of pendingAccounts) {
-      const exists = accounts.some((a) => a.email === imported.email);
-      if (exists) {
-        if (overwrite) await updateAccount(imported);
-      } else {
-        await addAccount(imported);
-      }
-    }
-    setConflictModalOpen(false);
-    setPendingAccounts([]);
-    addToast(t("settings.data.importSuccess"), "success");
-  };
 
   return (
     <PageContainer title={t("settings.title")}>
@@ -371,52 +253,6 @@ export default function SettingsPage() {
 
         <section className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t("settings.data.title")}
-          </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            {t("settings.data.description")}
-          </p>
-
-          <div className="flex flex-wrap gap-3 mb-6">
-            <button
-              onClick={() => setExportModalOpen(true)}
-              className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-800 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
-            >
-              {t("settings.data.exportBtn")}
-            </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 border border-green-300 dark:border-green-800 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
-            >
-              {t("settings.data.importBtn")}
-            </button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept=".enc"
-              onChange={handleFileSelect}
-            />
-          </div>
-
-          <button
-            onClick={() => {
-              if (!confirm(t("settings.data.confirm"))) return;
-              localStorage.clear();
-              indexedDB.deleteDatabase("asspp-accounts");
-              addToast(t("settings.data.cleared"), "success");
-              setTimeout(() => {
-                window.location.href = "/";
-              }, 1000);
-            }}
-            className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-          >
-            {t("settings.data.button")}
-          </button>
-        </section>
-
-        <section className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             {t("settings.about.title")}
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -450,119 +286,6 @@ export default function SettingsPage() {
         </section>
       </div>
 
-      <Modal
-        open={exportModalOpen}
-        onClose={() => setExportModalOpen(false)}
-        title={t("settings.data.exportBtn")}
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("settings.data.passwordPrompt")}
-            </label>
-            <input
-              type="password"
-              value={exportPassword}
-              onChange={(e) => setExportPassword(e.target.value)}
-              className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("settings.data.passwordConfirm")}
-            </label>
-            <input
-              type="password"
-              value={exportConfirmPassword}
-              onChange={(e) => setExportConfirmPassword(e.target.value)}
-              className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-            />
-          </div>
-        </div>
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            onClick={() => setExportModalOpen(false)}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          >
-            {t("settings.data.cancel")}
-          </button>
-          <button
-            onClick={handleExport}
-            disabled={!exportPassword || !exportConfirmPassword}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {t("settings.data.confirmBtn")}
-          </button>
-        </div>
-      </Modal>
-
-      <Modal
-        open={importModalOpen}
-        onClose={() => setImportModalOpen(false)}
-        title={t("settings.data.importBtn")}
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("settings.data.passwordPrompt")}
-            </label>
-            <input
-              type="password"
-              value={importPassword}
-              onChange={(e) => setImportPassword(e.target.value)}
-              className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-            />
-          </div>
-        </div>
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            onClick={() => setImportModalOpen(false)}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          >
-            {t("settings.data.cancel")}
-          </button>
-          <button
-            onClick={handleImport}
-            disabled={!importPassword}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {t("settings.data.confirmBtn")}
-          </button>
-        </div>
-      </Modal>
-
-      <Modal
-        open={conflictModalOpen}
-        onClose={() => setConflictModalOpen(false)}
-        title={t("settings.data.conflictTitle")}
-      >
-        <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">
-          {t("settings.data.conflictDesc", {
-            conflict: conflictStats.conflict,
-            new: conflictStats.new,
-          })}
-        </p>
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={() => handleResolveConflict(true)}
-            className="w-full px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-          >
-            {t("settings.data.conflictOverwrite")}
-          </button>
-          <button
-            onClick={() => handleResolveConflict(false)}
-            className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          >
-            {t("settings.data.conflictSkip")}
-          </button>
-          <button
-            onClick={() => setConflictModalOpen(false)}
-            className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 mt-2 transition-colors"
-          >
-            {t("settings.data.cancel")}
-          </button>
-        </div>
-      </Modal>
     </PageContainer>
   );
 }

@@ -6,6 +6,7 @@ import {
   SearchIcon,
   DownloadsIcon,
   SettingsIcon,
+  AdminIcon,
 } from "../common/icons";
 
 const navItems = [
@@ -14,6 +15,7 @@ const navItems = [
   { to: "/search", label: "search", icon: SearchIcon },
   { to: "/downloads", label: "downloads", icon: DownloadsIcon },
   { to: "/settings", label: "settings", icon: SettingsIcon },
+  { to: "/admin", label: "admin", icon: AdminIcon },
 ];
 
 export default function MobileNav() {

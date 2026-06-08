@@ -21,7 +21,55 @@
     "accounts": "账号",
     "search": "搜索",
     "downloads": "下载",
-    "settings": "设置"
+    "settings": "设置",
+    "admin": "管理"
+  },
+  "admin": {
+    "auth": {
+      "title": "管理员登录",
+      "placeholder": "管理员密码",
+      "submit": "登录",
+      "verifying": "验证中...",
+      "error": "管理员密码错误"
+    },
+    "disabled": {
+      "title": "管理后台未配置",
+      "description": "设置 ADMIN_PASSWORD 环境变量以启用管理后台。"
+    },
+    "accounts": {
+      "title": "账号管理",
+      "add": "添加账号",
+      "addTitle": "添加 Apple 账号",
+      "addSuccess": "账号添加成功",
+      "empty": "暂无账号",
+      "emptyDescription": "添加一个 Apple 账号以开始使用。",
+      "detail": "账号详情",
+      "reauth": "重新认证",
+      "reauthSuccess": "重新认证成功",
+      "reauthFailed": "重新认证失败",
+      "delete": "删除",
+      "deleteConfirm": "确定要删除此账号吗？",
+      "deleteSuccess": "账号已删除",
+      "deleteFailed": "删除失败",
+      "back": "返回",
+      "fields": {
+        "email": "邮箱",
+        "appleId": "Apple ID",
+        "name": "姓名",
+        "store": "商店区域",
+        "dsid": "DSID",
+        "deviceId": "设备 ID",
+        "pod": "Pod"
+      }
+    },
+    "migration": {
+      "title": "检测到本地账号",
+      "description": "在此浏览器中发现 {{count}} 个账号。迁移到服务端以供共享使用。",
+      "migrate": "迁移到服务端",
+      "dismiss": "忽略",
+      "success": "成功迁移 {{count}} 个账号",
+      "failed": "迁移失败"
+    }
   },
   "home": {
     "welcome": "欢迎来到 Asspp Web",
@@ -94,6 +142,7 @@
     "loading": "加载账号中...",
     "empty": "暂未添加账号。",
     "emptyDesc": "在这里统一管理您的 Apple 账号，随时获取应用下载许可证。",
+    "emptyDescShared": "暂无共享账号。请管理员通过管理后台添加账号。",
     "addFirst": "添加您的第一个账号",
     "addForm": {
       "title": "添加账号",

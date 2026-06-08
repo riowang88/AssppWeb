@@ -17,10 +17,16 @@ export const config = {
   buildDate: process.env.BUILD_DATE || "unknown",
   // Access password protection (empty = disabled)
   accessPassword: process.env.ACCESS_PASSWORD || "",
+  // Admin password (empty = admin panel disabled)
+  adminPassword: process.env.ADMIN_PASSWORD || "",
 };
 
 export const accessPasswordHash = config.accessPassword
   ? createHash("sha256").update(config.accessPassword).digest("hex")
+  : "";
+
+export const adminPasswordHash = config.adminPassword
+  ? createHash("sha256").update(config.adminPassword).digest("hex")
   : "";
 
 /** Timing-safe comparison of a client-supplied token against the precomputed hash. */
@@ -28,6 +34,19 @@ export function verifyAccessToken(token: string): boolean {
   const expected = Buffer.from(accessPasswordHash, "utf8");
   const actual = Buffer.from(token, "utf8");
   return expected.length === actual.length && timingSafeEqual(expected, actual);
+}
+
+export function verifyAdminToken(token: string): boolean {
+  if (!adminPasswordHash) return false;
+  const expected = Buffer.from(adminPasswordHash, "utf8");
+  const actual = Buffer.from(token, "utf8");
+  return expected.length === actual.length && timingSafeEqual(expected, actual);
+}
+
+const FALLBACK_ENCRYPT_KEY = "asspp-default-key";
+
+export function getEncryptionKey(): string {
+  return accessPasswordHash || createHash("sha256").update(FALLBACK_ENCRYPT_KEY).digest("hex");
 }
 
 export const MAX_DOWNLOAD_SIZE = 8 * 1024 * 1024 * 1024; // 8 GB

@@ -27,7 +27,7 @@ export default function PackageDetail() {
     useDownloads();
   const { t } = useTranslation();
   const addToast = useToastStore((s) => s.addToast);
-  const { accounts } = useAccounts();
+  const { accounts, getDownloadContext } = useAccounts();
   const { startDownload } = useDownloadAction();
 
   const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -120,7 +120,8 @@ export default function PackageDetail() {
 
       if (app && isNewerVersion(app.version, task.software.version)) {
         setLatestApp(app);
-        const result = await listVersions(account, app);
+        const fullAccount = await getDownloadContext(account.email);
+        const result = await listVersions(fullAccount, app);
         setAvailableVersions(result.versions);
         setSelectedVersion(result.versions[0] || "");
         setShowUpdateModal(true);
@@ -138,11 +139,12 @@ export default function PackageDetail() {
     if (!task || !account || !latestApp) return;
     setShowUpdateModal(false);
     try {
+      const fullAccount = await getDownloadContext(account.email);
       const isLatest =
         availableVersions.length > 0 &&
         selectedVersion === availableVersions[0];
       await startDownload(
-        account,
+        fullAccount,
         latestApp,
         isLatest ? undefined : selectedVersion,
       );

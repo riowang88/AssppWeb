@@ -12,9 +12,6 @@ import PasswordGate from "./components/Auth/PasswordGate";
 
 const HomePage = lazy(() => import("./components/Welcome/HomePage"));
 const AccountList = lazy(() => import("./components/Account/AccountList"));
-const AddAccountForm = lazy(
-  () => import("./components/Account/AddAccountForm"),
-);
 const AccountDetail = lazy(() => import("./components/Account/AccountDetail"));
 const SearchPage = lazy(() => import("./components/Search/SearchPage"));
 const ProductDetail = lazy(() => import("./components/Search/ProductDetail"));
@@ -23,6 +20,16 @@ const DownloadList = lazy(() => import("./components/Download/DownloadList"));
 const AddDownload = lazy(() => import("./components/Download/AddDownload"));
 const PackageDetail = lazy(() => import("./components/Download/PackageDetail"));
 const SettingsPage = lazy(() => import("./components/Settings/SettingsPage"));
+const AdminGate = lazy(() => import("./components/Admin/AdminGate"));
+const AdminAccountList = lazy(
+  () => import("./components/Admin/AdminAccountList"),
+);
+const AdminAddAccount = lazy(
+  () => import("./components/Admin/AdminAddAccount"),
+);
+const AdminAccountDetail = lazy(
+  () => import("./components/Admin/AdminAccountDetail"),
+);
 
 function Loading() {
   const { t } = useTranslation();
@@ -70,7 +77,6 @@ export default function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/accounts" element={<AccountList />} />
-              <Route path="/accounts/add" element={<AddAccountForm />} />
               <Route path="/accounts/:email" element={<AccountDetail />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/search/:appId" element={<ProductDetail />} />
@@ -82,6 +88,30 @@ export default function App() {
               <Route path="/downloads/add" element={<AddDownload />} />
               <Route path="/downloads/:id" element={<PackageDetail />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route
+                path="/admin"
+                element={
+                  <AdminGate>
+                    <AdminAccountList />
+                  </AdminGate>
+                }
+              />
+              <Route
+                path="/admin/accounts/add"
+                element={
+                  <AdminGate>
+                    <AdminAddAccount />
+                  </AdminGate>
+                }
+              />
+              <Route
+                path="/admin/accounts/:email"
+                element={
+                  <AdminGate>
+                    <AdminAccountDetail />
+                  </AdminGate>
+                }
+              />
             </Routes>
           </Suspense>
         </main>

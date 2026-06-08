@@ -78,7 +78,7 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <ActionCard
-            to="/accounts/add"
+            to="/admin"
             title={t("home.actions.addAccount")}
             description={t("home.actions.addAccountDesc")}
           />

@@ -7,7 +7,7 @@ export function accessAuth(req: Request, res: Response, next: NextFunction) {
     return;
   }
 
-  if (req.path.startsWith("/auth/") || req.path.startsWith("/install/")) {
+  if (req.path.startsWith("/auth/") || req.path.startsWith("/install/") || req.path.startsWith("/admin/auth/")) {
     next();
     return;
   }

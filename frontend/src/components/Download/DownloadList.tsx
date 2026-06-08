@@ -32,7 +32,7 @@ export default function DownloadList() {
   } = useDownloads();
   const [filter, setFilter] = useState<StatusFilter>("all");
   const addToast = useToastStore((s) => s.addToast);
-  const { accounts } = useAccounts();
+  const { accounts, getDownloadContext } = useAccounts();
   const { startDownload } = useDownloadAction();
 
   const [checkingAll, setCheckingAll] = useState(false);
@@ -116,7 +116,8 @@ export default function DownloadList() {
           latestApp &&
           isNewerVersion(latestApp.version, task.software.version)
         ) {
-          await startDownload(account, latestApp);
+          const fullAccount = await getDownloadContext(account.email);
+          await startDownload(fullAccount, latestApp);
           await deleteDownload(task.id);
           count++;
         }

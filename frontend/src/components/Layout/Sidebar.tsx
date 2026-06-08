@@ -6,6 +6,7 @@ import {
   SearchIcon,
   DownloadsIcon,
   SettingsIcon,
+  AdminIcon,
   SunIcon,
   MoonIcon,
   SystemIcon,
@@ -18,6 +19,7 @@ const navItems = [
   { to: "/search", label: "search", icon: SearchIcon },
   { to: "/downloads", label: "downloads", icon: DownloadsIcon },
   { to: "/settings", label: "settings", icon: SettingsIcon },
+  { to: "/admin", label: "admin", icon: AdminIcon },
 ];
 
 export default function Sidebar() {

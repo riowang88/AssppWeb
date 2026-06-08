@@ -43,6 +43,17 @@ export interface Account {
   pod?: string;
 }
 
+export interface AccountSummary {
+  email: string;
+  appleId: string;
+  store: string;
+  firstName: string;
+  lastName: string;
+  directoryServicesIdentifier: string;
+  deviceIdentifier: string;
+  pod?: string;
+}
+
 export interface Sinf {
   id: number;
   sinf: string; // base64

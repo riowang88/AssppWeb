@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import { storeIdToCountry } from "../apple/config";
-import type { Account } from "../types";
+import type { Account, AccountSummary } from "../types";
 
 export interface AccountContext {
   userName: string;
@@ -8,12 +8,8 @@ export interface AccountContext {
   country: string;
 }
 
-/**
- * Extract display-friendly account context for toast notifications.
- * Centralises the repeated pattern of building userName / appleId / country.
- */
 export function getAccountContext(
-  account: Account | undefined,
+  account: Account | AccountSummary | undefined,
   t: TFunction,
 ): AccountContext {
   if (!account) {

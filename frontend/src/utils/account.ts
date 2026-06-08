@@ -1,5 +1,7 @@
 import { storeIdToCountry } from "../apple/config";
-import type { Account } from "../types";
+import type { Account, AccountSummary } from "../types";
+
+type AccountLike = Account | AccountSummary;
 
 function normalizeStorefront(store?: string): string | undefined {
   if (!store) return undefined;
@@ -8,14 +10,14 @@ function normalizeStorefront(store?: string): string | undefined {
 }
 
 export function accountStoreCountry(
-  account?: Account | null,
+  account?: AccountLike | null,
 ): string | undefined {
   const storeId = normalizeStorefront(account?.store);
   if (!storeId) return undefined;
   return storeIdToCountry(storeId);
 }
 
-export function firstAccountCountry(accounts: Account[]): string | undefined {
+export function firstAccountCountry(accounts: AccountLike[]): string | undefined {
   for (const account of accounts) {
     const country = accountStoreCountry(account);
     if (country) return country;
@@ -23,7 +25,7 @@ export function firstAccountCountry(accounts: Account[]): string | undefined {
   return undefined;
 }
 
-export async function accountHash(account: Account): Promise<string> {
+export async function accountHash(account: AccountLike): Promise<string> {
   const source =
     account.directoryServicesIdentifier || account.appleId || account.email;
   return sha256Hex(source);

@@ -1,3 +1,38 @@
+export interface Cookie {
+  name: string;
+  value: string;
+  path: string;
+  domain?: string;
+  expiresAt?: number;
+  httpOnly: boolean;
+  secure: boolean;
+}
+
+export interface Account {
+  email: string;
+  password: string;
+  appleId: string;
+  store: string;
+  firstName: string;
+  lastName: string;
+  passwordToken: string;
+  directoryServicesIdentifier: string;
+  cookies: Cookie[];
+  deviceIdentifier: string;
+  pod?: string;
+}
+
+export interface AccountSummary {
+  email: string;
+  appleId: string;
+  store: string;
+  firstName: string;
+  lastName: string;
+  directoryServicesIdentifier: string;
+  deviceIdentifier: string;
+  pod?: string;
+}
+
 export interface Software {
   id: number;
   bundleID: string;

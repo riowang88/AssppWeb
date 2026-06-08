@@ -12,7 +12,7 @@ import type { Software } from "../../types";
 export default function ProductDetail() {
   const { appId } = useParams<{ appId: string }>();
   const location = useLocation();
-  const { accounts } = useAccounts();
+  const { accounts, getDownloadContext } = useAccounts();
   const { t } = useTranslation();
   const {
     startDownload,
@@ -82,9 +82,10 @@ export default function ProductDetail() {
     if (!account || !app) return;
     setLoadingAction("purchase");
     try {
-      await acquireLicense(account, app);
+      const fullAccount = await getDownloadContext(account.email);
+      await acquireLicense(fullAccount, app);
     } catch (e) {
-      toastLicenseError(account, app, e);
+      if (account) toastLicenseError(account, app, e);
     } finally {
       setLoadingAction(null);
     }
@@ -94,9 +95,10 @@ export default function ProductDetail() {
     if (!account || !app) return;
     setLoadingAction("download");
     try {
-      await startDownload(account, app);
+      const fullAccount = await getDownloadContext(account.email);
+      await startDownload(fullAccount, app);
     } catch (e) {
-      toastDownloadError(account, app, e);
+      if (account) toastDownloadError(account, app, e);
     } finally {
       setLoadingAction(null);
     }
@@ -126,7 +128,7 @@ export default function ProductDetail() {
 
         {accounts.length === 0 ? (
           <div className="p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg text-sm text-yellow-700 dark:text-yellow-400">
-            <Link to="/accounts/add" className="font-medium underline">
+            <Link to="/admin" className="font-medium underline">
               {t("search.product.addAccountLink")}
             </Link>{" "}
             {t("search.product.addAccountPrompt")}

@@ -21,7 +21,55 @@
     "accounts": "Accounts",
     "search": "Search",
     "downloads": "Downloads",
-    "settings": "Settings"
+    "settings": "Settings",
+    "admin": "Admin"
+  },
+  "admin": {
+    "auth": {
+      "title": "Admin Login",
+      "placeholder": "Admin password",
+      "submit": "Login",
+      "verifying": "Verifying...",
+      "error": "Invalid admin password"
+    },
+    "disabled": {
+      "title": "Admin Panel Not Configured",
+      "description": "Set ADMIN_PASSWORD environment variable to enable the admin panel."
+    },
+    "accounts": {
+      "title": "Account Management",
+      "add": "Add Account",
+      "addTitle": "Add Apple Account",
+      "addSuccess": "Account added successfully",
+      "empty": "No accounts",
+      "emptyDescription": "Add an Apple account to get started.",
+      "detail": "Account Detail",
+      "reauth": "Re-authenticate",
+      "reauthSuccess": "Re-authentication successful",
+      "reauthFailed": "Re-authentication failed",
+      "delete": "Delete",
+      "deleteConfirm": "Are you sure you want to delete this account?",
+      "deleteSuccess": "Account deleted",
+      "deleteFailed": "Failed to delete account",
+      "back": "Back",
+      "fields": {
+        "email": "Email",
+        "appleId": "Apple ID",
+        "name": "Name",
+        "store": "Store Region",
+        "dsid": "DSID",
+        "deviceId": "Device ID",
+        "pod": "Pod"
+      }
+    },
+    "migration": {
+      "title": "Local accounts detected",
+      "description": "Found {{count}} account(s) stored in this browser. Migrate them to the server for shared access.",
+      "migrate": "Migrate to server",
+      "dismiss": "Dismiss",
+      "success": "Successfully migrated {{count}} account(s)",
+      "failed": "Migration failed"
+    }
   },
   "home": {
     "welcome": "Welcome to Asspp Web",
@@ -94,6 +142,7 @@
     "loading": "Loading accounts...",
     "empty": "No accounts added yet.",
     "emptyDesc": "Manage your Apple accounts here to easily acquire app download licenses anytime.",
+    "emptyDescShared": "No shared accounts available. Ask an admin to add accounts via the Admin panel.",
     "addFirst": "Add your first account",
     "addForm": {
       "title": "Add Account",

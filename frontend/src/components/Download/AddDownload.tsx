@@ -15,7 +15,7 @@ import { getErrorMessage } from "../../utils/error";
 import type { Software } from "../../types";
 
 export default function AddDownload() {
-  const { accounts, updateAccount } = useAccounts();
+  const { accounts, updateCookies, getDownloadContext } = useAccounts();
   const { defaultCountry } = useSettingsStore();
   const { t } = useTranslation();
   const addToast = useToastStore((s) => s.addToast);
@@ -105,9 +105,10 @@ export default function AddDownload() {
     if (!account || !app) return;
     setLoadingAction("license");
     try {
-      await acquireLicense(account, app);
+      const fullAccount = await getDownloadContext(account.email);
+      await acquireLicense(fullAccount, app);
     } catch (e) {
-      toastLicenseError(account, app, e);
+      if (account) toastLicenseError(account, app, e);
     } finally {
       setLoadingAction(null);
     }
@@ -117,9 +118,10 @@ export default function AddDownload() {
     if (!account || !app) return;
     setLoadingAction("versions");
     try {
-      const result = await listVersions(account, app);
+      const fullAccount = await getDownloadContext(account.email);
+      const result = await listVersions(fullAccount, app);
       setVersions(result.versions);
-      await updateAccount({ ...account, cookies: result.updatedCookies });
+      await updateCookies(account.email, result.updatedCookies);
       setStep("versions");
     } catch (e) {
       addToast(getErrorMessage(e, t("downloads.add.versionsFailed")), "error");
@@ -132,9 +134,10 @@ export default function AddDownload() {
     if (!account || !app) return;
     setLoadingAction("download");
     try {
-      await startDownload(account, app, selectedVersion || undefined);
+      const fullAccount = await getDownloadContext(account.email);
+      await startDownload(fullAccount, app, selectedVersion || undefined);
     } catch (e) {
-      toastDownloadError(account, app, e);
+      if (account) toastDownloadError(account, app, e);
     } finally {
       setLoadingAction(null);
     }

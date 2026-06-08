@@ -1,9 +1,9 @@
-import { useEffect } from "react";
-import { Link, NavLink } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import PageContainer from "../Layout/PageContainer";
-import { useAccountsStore } from "../../store/accounts";
-import { storeIdToCountry } from "../../apple/config";
+import { useEffect } from 'react';
+import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import PageContainer from '../Layout/PageContainer';
+import { useAccountsStore } from '../../store/accounts';
+import { storeIdToCountry } from '../../apple/config';
 
 export default function AccountList() {
   const { t } = useTranslation();
@@ -14,23 +14,12 @@ export default function AccountList() {
   }, [loadAccounts]);
 
   return (
-    <PageContainer
-      title={t("accounts.title")}
-      action={
-        <Link
-          to="/accounts/add"
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          {t("accounts.add")}
-        </Link>
-      }
-    >
+    <PageContainer title={t('accounts.title')}>
       {loading ? (
         <div className="text-center text-gray-500 dark:text-gray-400 py-12">
-          {t("accounts.loading")}
+          {t('accounts.loading')}
         </div>
       ) : accounts.length === 0 ? (
-        /* Removed transition-colors to prevent dark mode flashing */
         <div className="flex flex-col items-center justify-center py-16 px-4 my-4 bg-gray-50 dark:bg-gray-900/30 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-full shadow-sm mb-4 border border-gray-100 dark:border-gray-700">
             <svg
@@ -48,30 +37,11 @@ export default function AccountList() {
             </svg>
           </div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">
-            {t("accounts.empty")}
+            {t('accounts.empty')}
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center max-w-sm">
-            {t("accounts.emptyDesc")}
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-sm">
+            {t('accounts.emptyDescShared')}
           </p>
-          <Link
-            to="/accounts/add"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 hover:shadow-md transition-all active:scale-95"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 4.5v15m7.5-7.5h-15"
-              />
-            </svg>
-            {t("accounts.addFirst")}
-          </Link>
         </div>
       ) : (
         <div className="space-y-2">
@@ -86,8 +56,8 @@ export default function AccountList() {
                 className={({ isActive }) =>
                   `block bg-white dark:bg-gray-900 rounded-lg border p-4 transition-colors ${
                     isActive
-                      ? "border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30"
-                      : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                      ? 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30'
+                      : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
                   }`
                 }
               >
