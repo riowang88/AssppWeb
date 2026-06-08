@@ -6,7 +6,7 @@ export interface BagOutput {
 }
 
 export const defaultAuthURL =
-  "https://buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/authenticate";
+  "https://auth.itunes.apple.com/auth/v1/native/fast";
 
 // Fetches the bag via the backend proxy.
 // The backend fetches it using Node.js native HTTPS.
@@ -44,14 +44,9 @@ export async function fetchBag(deviceId: string): Promise<BagOutput> {
       return { authURL: defaultAuthURL };
     }
 
-    // Apple's bag now returns the new SRP/GSA endpoint (/auth/v1/native)
-    // which expects a completely different protocol. Our code uses the legacy
-    // MZFinance plist protocol, so we must ignore the new endpoint.
-    if (authURL.includes("/auth/v1/")) {
-      console.warn(
-        "[Bag] authenticateAccount points to SRP endpoint, using legacy MZFinance endpoint",
-      );
-      return { authURL: defaultAuthURL };
+    // Apple requires /fast suffix on auth.itunes.apple.com endpoints
+    if (authURL.includes("auth.itunes.apple.com") && !authURL.endsWith("/fast")) {
+      authURL = authURL.replace(/\/?$/, "/fast");
     }
 
     return { authURL };
