@@ -82,9 +82,17 @@ async function purchaseWithParams(
     account.cookies,
   );
 
+  if (!response.body.trim()) {
+    throw new PurchaseError(
+      `Purchase failed: HTTP ${response.status} with empty body`,
+      String(response.status),
+    );
+  }
+
   const dict = parsePlist(response.body) as Record<string, any>;
 
   if (dict.failureType) {
+    console.warn("[Purchase] Apple error:", JSON.stringify(dict, null, 2));
     const failureType = String(dict.failureType);
     const customerMessage = dict.customerMessage as string | undefined;
     switch (failureType) {
@@ -121,17 +129,10 @@ async function purchaseWithParams(
           }
         }
 
-        // Handle unknown error specific fallback mappings
-        let msg = customerMessage;
-        if (
-          msg === "An unknown error has occurred" ||
-          msg === "An unknown error has occurred."
-        ) {
-          msg = i18n.t("errors.purchase.unknownError");
-        }
-
         throw new PurchaseError(
-          msg ?? i18n.t("errors.purchase.failed", { failureType }),
+          customerMessage
+            ? `${customerMessage} (code: ${failureType})`
+            : i18n.t("errors.purchase.failed", { failureType }),
           failureType,
         );
       }

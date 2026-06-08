@@ -81,7 +81,7 @@ export function useDownloadAction() {
         account.email,
         account.password,
         undefined,
-        account.cookies,
+        undefined,
         account.deviceIdentifier,
       );
       await updateCookies(renewed.email, renewed.cookies);
