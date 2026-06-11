@@ -304,6 +304,13 @@ function addAuthEndpoint(endpoints: URL[], endpoint: URL): void {
 function authEndpointURL(rawURL: string): URL {
   const url = new URL(rawURL);
   url.searchParams.delete('guid');
+  if (
+    url.hostname === 'auth.itunes.apple.com' &&
+    (url.pathname === '/auth/v1/native' ||
+      url.pathname === '/auth/v1/native/fast')
+  ) {
+    url.pathname = '/auth/v1/native/fast/';
+  }
   return url;
 }
 

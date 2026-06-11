@@ -110,6 +110,44 @@ describe("apple/authenticate", () => {
     );
   });
 
+  it("normalizes Apple native auth endpoints to the fast plist endpoint", async () => {
+    vi.mocked(fetchBag).mockResolvedValue({
+      authURL: "https://auth.itunes.apple.com/auth/v1/native",
+    });
+    vi.mocked(appleRequest).mockResolvedValue({
+      status: 200,
+      statusText: "OK",
+      headers: {},
+      rawHeaders: [],
+      body: buildPlist({
+        accountInfo: {
+          appleId: "test@example.com",
+          address: {
+            firstName: "Test",
+            lastName: "User",
+          },
+        },
+        passwordToken: "token",
+        dsPersonId: "123",
+      }),
+    });
+
+    await authenticate(
+      "test@example.com",
+      "password",
+      undefined,
+      undefined,
+      "aabbccddeeff",
+    );
+
+    expect(vi.mocked(appleRequest).mock.calls[0][0].host).toBe(
+      "auth.itunes.apple.com",
+    );
+    expect(vi.mocked(appleRequest).mock.calls[0][0].path).toBe(
+      "/auth/v1/native/fast/",
+    );
+  });
+
   it("increments Apple login attempt values across transient retries", async () => {
     vi.spyOn(window, "setTimeout").mockImplementation((handler: TimerHandler) => {
       if (typeof handler === "function") handler();

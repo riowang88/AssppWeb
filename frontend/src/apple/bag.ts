@@ -44,16 +44,7 @@ export async function fetchBag(deviceId: string): Promise<BagOutput> {
       return { authURL: defaultAuthURL };
     }
 
-    // Apple's /auth/v1/native/fast endpoint has returned HTML 404/empty 204 in
-    // real traces for this client. Keep the current bag endpoint otherwise.
-    if (authURL.includes("/auth/v1/native/fast")) {
-      console.warn(
-        "[Bag] authenticateAccount points to incompatible fast endpoint, using legacy MZFinance endpoint",
-      );
-      return { authURL: defaultAuthURL };
-    }
-
-    return { authURL };
+    return { authURL: normalizeAuthURL(authURL) };
   } catch (error) {
     console.warn(
       `[Bag] Failed to fetch/parse bag, using default auth endpoint: ${
@@ -62,4 +53,16 @@ export async function fetchBag(deviceId: string): Promise<BagOutput> {
     );
     return { authURL: defaultAuthURL };
   }
+}
+
+function normalizeAuthURL(rawURL: string): string {
+  const url = new URL(rawURL);
+  if (
+    url.hostname === "auth.itunes.apple.com" &&
+    (url.pathname === "/auth/v1/native" ||
+      url.pathname === "/auth/v1/native/fast")
+  ) {
+    url.pathname = "/auth/v1/native/fast/";
+  }
+  return url.toString();
 }

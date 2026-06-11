@@ -48,7 +48,7 @@ describe("apple/bag", () => {
     expect(result.authURL).toBe(defaultAuthURL);
   });
 
-  it("keeps the native auth endpoint returned by the bag", async () => {
+  it("normalizes the native auth endpoint to the fast plist endpoint", async () => {
     const xml = buildPlist({
       urlBag: {
         authenticateAccount: "https://auth.itunes.apple.com/auth/v1/native",
@@ -64,10 +64,12 @@ describe("apple/bag", () => {
 
     const result = await fetchBag("aabbccddeeff");
 
-    expect(result.authURL).toBe("https://auth.itunes.apple.com/auth/v1/native");
+    expect(result.authURL).toBe(
+      "https://auth.itunes.apple.com/auth/v1/native/fast/",
+    );
   });
 
-  it("falls back when authenticateAccount uses the incompatible fast endpoint", async () => {
+  it("adds the required trailing slash to the fast auth endpoint", async () => {
     const xml = buildPlist({
       urlBag: {
         authenticateAccount: "https://auth.itunes.apple.com/auth/v1/native/fast",
@@ -83,7 +85,9 @@ describe("apple/bag", () => {
 
     const result = await fetchBag("aabbccddeeff");
 
-    expect(result.authURL).toBe(defaultAuthURL);
+    expect(result.authURL).toBe(
+      "https://auth.itunes.apple.com/auth/v1/native/fast/",
+    );
   });
 
   it("keeps non-SRP authenticateAccount URLs from the bag", async () => {
