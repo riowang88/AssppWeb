@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { buildPlist } from "../../src/apple/plist";
+import { buildPlist, parsePlist } from "../../src/apple/plist";
 import { authenticate } from "../../src/apple/authenticate";
 import { appleRequest } from "../../src/apple/request";
 import { fetchBag } from "../../src/apple/bag";
@@ -57,6 +57,15 @@ describe("apple/authenticate", () => {
     expect(endpoint.searchParams.get("guid")).toBe("aabbccddeeff");
     expect(endpoint.searchParams.getAll("guid")).toHaveLength(1);
     expect(endpoint.searchParams.get("foo")).toBe("1");
+    expect(requestCall.headers?.["Content-Type"]).toBe(
+      "application/x-www-form-urlencoded",
+    );
+
+    const requestBody = parsePlist(String(requestCall.body)) as Record<
+      string,
+      string
+    >;
+    expect(requestBody.createSession).toBe("true");
   });
 
   it("retries the observed Apple HTML 503 response and then succeeds", async () => {

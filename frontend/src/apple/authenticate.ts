@@ -89,6 +89,7 @@ export async function authenticate(
         const body: Record<string, string> = {
           appleId: email,
           attempt: code ? "2" : "4",
+          createSession: "true",
           guid: deviceId,
           password: code ? `${password}${code}` : password,
           rmp: "0",
@@ -98,7 +99,7 @@ export async function authenticate(
         const plistBody = buildPlist(body);
 
         const headers: Record<string, string> = {
-          "Content-Type": "application/x-apple-plist",
+          "Content-Type": "application/x-www-form-urlencoded",
         };
 
         const response = await appleRequest({
