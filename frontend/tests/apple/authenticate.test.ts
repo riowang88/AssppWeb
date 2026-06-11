@@ -253,4 +253,48 @@ describe("apple/authenticate", () => {
     expect(account.passwordToken).toBe("token");
     expect(appleRequest).toHaveBeenCalledTimes(2);
   });
+
+  it("follows non-302 Apple redirects before parsing the response body", async () => {
+    vi.mocked(fetchBag).mockResolvedValue({
+      authURL: "https://auth.itunes.apple.com/auth/v1/native/fast",
+    });
+    vi.mocked(appleRequest)
+      .mockResolvedValueOnce({
+        status: 301,
+        statusText: "Moved Permanently",
+        headers: { location: "/auth/v1/native/fast/" },
+        rawHeaders: [],
+        body: "<html><head><title>Moved Permanently</title></head>",
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        statusText: "OK",
+        headers: {},
+        rawHeaders: [],
+        body: buildPlist({
+          accountInfo: {
+            appleId: "test@example.com",
+            address: {
+              firstName: "Test",
+              lastName: "User",
+            },
+          },
+          passwordToken: "token",
+          dsPersonId: "123",
+        }),
+      });
+
+    await authenticate(
+      "test@example.com",
+      "password",
+      undefined,
+      undefined,
+      "aabbccddeeff",
+    );
+
+    expect(appleRequest).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(appleRequest).mock.calls[1][0].path).toContain(
+      "/auth/v1/native/fast/",
+    );
+  });
 });

@@ -70,7 +70,7 @@ export async function getDownloadInfo(
 
     cookies = extractAndMergeCookies(response.rawHeaders, cookies);
 
-    if (response.status === 302) {
+    if (isRedirectStatus(response.status)) {
       const location = response.headers["location"];
       if (!location) {
         traceLog(trace, 'download-info-redirect-missing-location', {
@@ -80,7 +80,7 @@ export async function getDownloadInfo(
         });
         throw new DownloadError(i18n.t("errors.download.redirectLocation"));
       }
-      const url = new URL(location);
+      const url = new URL(location, `https://${requestHost}`);
       requestHost = url.hostname;
       requestPath = url.pathname + url.search;
       redirectAttempt++;
@@ -222,6 +222,10 @@ export async function getDownloadInfo(
   }
 
   throw new DownloadError(i18n.t("errors.download.tooManyRedirects"));
+}
+
+function isRedirectStatus(status: number): boolean {
+  return status >= 300 && status < 400;
 }
 
 function base64FromString(value: string): string {

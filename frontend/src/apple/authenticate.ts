@@ -125,7 +125,7 @@ export async function authenticate(
         const pod = podHeader || undefined;
 
         // Handle redirect
-        if (response.status === 302) {
+        if (isRedirectStatus(response.status)) {
           const location = response.headers["location"];
           if (!location) {
             traceLog(trace, 'auth-redirect-missing-location', {
@@ -140,7 +140,7 @@ export async function authenticate(
               i18n.t("errors.auth.redirectLocation"),
             );
           }
-          const url = new URL(location);
+          const url = new URL(location, `https://${requestHost}`);
           requestHost = url.hostname;
           requestPath = url.pathname + url.search;
           currentAttempt--;
@@ -279,4 +279,8 @@ function withGuid(rawURL: string, deviceId: string): URL {
 
 function sameEndpoint(a: URL, b: URL): boolean {
   return a.origin === b.origin && a.pathname === b.pathname;
+}
+
+function isRedirectStatus(status: number): boolean {
+  return status >= 300 && status < 400;
 }
