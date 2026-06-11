@@ -109,7 +109,13 @@ function redactObject(data: Record<string, TraceValue>): Record<string, TraceVal
 
 function redactValue(key: string, value: TraceValue): TraceValue {
   if (value === null || value === undefined) return value;
-  if (sensitiveKeyPattern.test(key)) return '[redacted]';
+  if (
+    sensitiveKeyPattern.test(key) &&
+    typeof value !== 'number' &&
+    typeof value !== 'boolean'
+  ) {
+    return '[redacted]';
+  }
   if (typeof value === 'string') return redactString(value);
   if (Array.isArray(value)) {
     return value.map((item) => redactValue(key, item));

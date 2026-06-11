@@ -49,6 +49,8 @@ describe('apple/trace', () => {
     traceLog(createTrace('enabled'), 'event', {
       email: 'test@example.com',
       passwordToken: 'secret-token',
+      setCookieCount: 2,
+      hasPasswordToken: true,
       status: 503,
     });
 
@@ -56,6 +58,8 @@ describe('apple/trace', () => {
     const payload = consoleSpy.mock.calls[0][1] as Record<string, unknown>;
     expect(payload.email).toBe('[redacted]');
     expect(payload.passwordToken).toBe('[redacted]');
+    expect(payload.setCookieCount).toBe(2);
+    expect(payload.hasPasswordToken).toBe(true);
     expect(payload.status).toBe(503);
   });
 });
