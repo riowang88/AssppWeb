@@ -69,6 +69,32 @@ describe("apple/plist", () => {
       expect(parsed.value).toBe("hello world");
     });
 
+    it("parses Apple Document envelope responses", () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Document xmlns="http://www.apple.com/itms/">
+  <key>foo</key><string>bar</string>
+  <key>count</key><integer>7</integer>
+</Document>`;
+
+      const parsed = parsePlist(xml);
+
+      expect(parsed.foo).toBe("bar");
+      expect(parsed.count).toBe(7);
+    });
+
+    it("parses plist embedded inside an Apple Document envelope", () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Document xmlns="http://www.apple.com/itms/">
+  <Protocol>
+    <plist version="1.0"><dict><key>nested</key><string>ok</string></dict></plist>
+  </Protocol>
+</Document>`;
+
+      const parsed = parsePlist(xml);
+
+      expect(parsed.nested).toBe("ok");
+    });
+
     it("classifies the Apple HTML 404/503 samples as invalid XML plist responses", () => {
       const html = `<html>
 <head><title>503 Service Temporarily Unavailable`;

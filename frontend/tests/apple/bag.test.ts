@@ -48,10 +48,29 @@ describe("apple/bag", () => {
     expect(result.authURL).toBe(defaultAuthURL);
   });
 
-  it("falls back when authenticateAccount uses the incompatible SRP endpoint", async () => {
+  it("keeps the native auth endpoint returned by the bag", async () => {
     const xml = buildPlist({
       urlBag: {
         authenticateAccount: "https://auth.itunes.apple.com/auth/v1/native",
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => xml,
+      }),
+    );
+
+    const result = await fetchBag("aabbccddeeff");
+
+    expect(result.authURL).toBe("https://auth.itunes.apple.com/auth/v1/native");
+  });
+
+  it("falls back when authenticateAccount uses the incompatible fast endpoint", async () => {
+    const xml = buildPlist({
+      urlBag: {
+        authenticateAccount: "https://auth.itunes.apple.com/auth/v1/native/fast",
       },
     });
     vi.stubGlobal(

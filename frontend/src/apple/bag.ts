@@ -44,12 +44,11 @@ export async function fetchBag(deviceId: string): Promise<BagOutput> {
       return { authURL: defaultAuthURL };
     }
 
-    // Apple's /auth/v1/native endpoint is SRP/GSA auth, not the legacy plist
-    // MZFinance flow used by this client. Real traces show plist posts there
-    // return HTML 404/empty 204, so fall back to the compatible endpoint.
-    if (authURL.includes("/auth/v1/")) {
+    // Apple's /auth/v1/native/fast endpoint has returned HTML 404/empty 204 in
+    // real traces for this client. Keep the current bag endpoint otherwise.
+    if (authURL.includes("/auth/v1/native/fast")) {
       console.warn(
-        "[Bag] authenticateAccount points to SRP endpoint, using legacy MZFinance endpoint",
+        "[Bag] authenticateAccount points to incompatible fast endpoint, using legacy MZFinance endpoint",
       );
       return { authURL: defaultAuthURL };
     }

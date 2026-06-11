@@ -57,11 +57,12 @@ export class PlistParseError extends Error {
 
 // Native browser plist parser — avoids @xmldom/xmldom bundling issues
 export function parsePlist(xml: string): any {
-  if (!xml.trim()) {
+  const normalized = normalizePlistXML(xml);
+  if (!normalized.trim()) {
     throw new PlistParseError("Invalid plist: empty response", "empty");
   }
 
-  const doc = new DOMParser().parseFromString(xml, "text/xml");
+  const doc = new DOMParser().parseFromString(normalized, "text/xml");
   if (doc.getElementsByTagName("parsererror").length > 0) {
     throw new PlistParseError("Invalid plist: malformed XML", "invalid-xml");
   }
@@ -78,6 +79,33 @@ export function parsePlist(xml: string): any {
     throw new PlistParseError("Invalid plist: empty <plist> element", "empty");
   }
   return parseNode(firstChild);
+}
+
+function normalizePlistXML(xml: string): string {
+  let normalized = xml.trim();
+  if (!normalized) return normalized;
+
+  const plistMatch = normalized.match(/<plist\b[\s\S]*?<\/plist>/i);
+  if (plistMatch) return plistMatch[0].trim();
+
+  const dictMatch = normalized.match(/<dict\b[\s\S]*?<\/dict>/i);
+  if (dictMatch) {
+    return wrapPlist(dictMatch[0].trim());
+  }
+
+  if (/<key\b/i.test(normalized)) {
+    const documentMatch = normalized.match(/<Document\b[^>]*>([\s\S]*?)<\/Document>/i);
+    if (documentMatch?.[1]) {
+      normalized = documentMatch[1].trim();
+    }
+    return wrapPlist(`<dict>${normalized}</dict>`);
+  }
+
+  return normalized;
+}
+
+function wrapPlist(body: string): string {
+  return `<plist version="1.0">${body}</plist>`;
 }
 
 function parseNode(node: Element): any {
