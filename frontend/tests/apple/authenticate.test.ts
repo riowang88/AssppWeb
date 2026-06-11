@@ -206,4 +206,51 @@ describe("apple/authenticate", () => {
       "/WebObjects/MZFinance.woa/wa/authenticate",
     );
   });
+
+  it("retries an Apple redirect response without location and then succeeds", async () => {
+    vi.spyOn(window, "setTimeout").mockImplementation((handler: TimerHandler) => {
+      if (typeof handler === "function") handler();
+      return 0;
+    });
+    vi.mocked(fetchBag).mockResolvedValue({
+      authURL:
+        "https://buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/authenticate",
+    });
+    vi.mocked(appleRequest)
+      .mockResolvedValueOnce({
+        status: 302,
+        statusText: "Found",
+        headers: {},
+        rawHeaders: [],
+        body: "",
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        statusText: "OK",
+        headers: {},
+        rawHeaders: [],
+        body: buildPlist({
+          accountInfo: {
+            appleId: "test@example.com",
+            address: {
+              firstName: "Test",
+              lastName: "User",
+            },
+          },
+          passwordToken: "token",
+          dsPersonId: "123",
+        }),
+      });
+
+    const account = await authenticate(
+      "test@example.com",
+      "password",
+      undefined,
+      undefined,
+      "aabbccddeeff",
+    );
+
+    expect(account.passwordToken).toBe("token");
+    expect(appleRequest).toHaveBeenCalledTimes(2);
+  });
 });

@@ -15,6 +15,13 @@ export class AuthenticationError extends Error {
   }
 }
 
+class TransientAuthResponseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TransientAuthResponseError";
+  }
+}
+
 export async function authenticate(
   email: string,
   password: string,
@@ -35,7 +42,6 @@ export async function authenticate(
     authEndpoints.push(fallbackEndpoint);
   }
 
-  let redirectAttempt = 0;
   const maxAttempts = 3;
 
   for (let endpointIndex = 0; endpointIndex < authEndpoints.length; endpointIndex++) {
@@ -43,6 +49,7 @@ export async function authenticate(
     let requestHost = authEndpoint.hostname;
     let requestPath = `${authEndpoint.pathname}${authEndpoint.search}`;
     let currentAttempt = 0;
+    let redirectAttempt = 0;
     let exhaustedTransientResponse = false;
 
     if (endpointIndex > 0) {
@@ -96,7 +103,9 @@ export async function authenticate(
         if (response.status === 302) {
           const location = response.headers["location"];
           if (!location) {
-            throw new Error(i18n.t("errors.auth.redirectLocation"));
+            throw new TransientAuthResponseError(
+              i18n.t("errors.auth.redirectLocation"),
+            );
           }
           const url = new URL(location);
           requestHost = url.hostname;
@@ -186,10 +195,11 @@ export async function authenticate(
 
 function isTransientAuthResponseError(error: Error): boolean {
   return (
-    error instanceof PlistParseError &&
-    (error.kind === "empty" ||
-      error.kind === "non-plist" ||
-      error.kind === "invalid-xml")
+    error instanceof TransientAuthResponseError ||
+    (error instanceof PlistParseError &&
+      (error.kind === "empty" ||
+        error.kind === "non-plist" ||
+        error.kind === "invalid-xml"))
   );
 }
 
