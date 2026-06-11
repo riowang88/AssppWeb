@@ -58,6 +58,12 @@ export async function appleRequest(
 
   const body = await resp.text();
   const durationMs = Math.round(performance.now() - startedAt);
+  const headerNames = Array.from(
+    new Set(resp.raw_headers.map(([key]) => key.toLowerCase())),
+  ).filter((key) => key !== 'set-cookie');
+  const setCookieCount = resp.raw_headers.filter(
+    ([key]) => key.toLowerCase() === 'set-cookie',
+  ).length;
 
   traceLog(opts.trace, 'apple-request', {
     stage: opts.stage,
@@ -73,6 +79,10 @@ export async function appleRequest(
     durationMs,
     isRedirect: resp.status >= 300 && resp.status < 400,
     hasLocation: Boolean(responseHeaders.location),
+    headerNames,
+    setCookieCount,
+    hasPod: Boolean(responseHeaders.pod),
+    hasStoreFront: Boolean(responseHeaders['x-set-apple-store-front']),
   });
 
   return {
