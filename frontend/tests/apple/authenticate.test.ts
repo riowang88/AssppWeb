@@ -138,4 +138,72 @@ describe("apple/authenticate", () => {
     );
     expect(appleRequest).toHaveBeenCalledTimes(3);
   });
+
+  it("falls back to the legacy MZFinance endpoint when bag auth returns repeated HTML", async () => {
+    vi.spyOn(window, "setTimeout").mockImplementation((handler: TimerHandler) => {
+      if (typeof handler === "function") handler();
+      return 0;
+    });
+    vi.mocked(fetchBag).mockResolvedValue({
+      authURL: "https://auth.itunes.apple.com/auth/v1/native/fast",
+    });
+    vi.mocked(appleRequest)
+      .mockResolvedValueOnce({
+        status: 503,
+        statusText: "Service Temporarily Unavailable",
+        headers: {},
+        rawHeaders: [],
+        body: "<html><head><title>503 Service Temporarily Unavailable",
+      })
+      .mockResolvedValueOnce({
+        status: 503,
+        statusText: "Service Temporarily Unavailable",
+        headers: {},
+        rawHeaders: [],
+        body: "<html><head><title>503 Service Temporarily Unavailable",
+      })
+      .mockResolvedValueOnce({
+        status: 503,
+        statusText: "Service Temporarily Unavailable",
+        headers: {},
+        rawHeaders: [],
+        body: "<html><head><title>503 Service Temporarily Unavailable",
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        statusText: "OK",
+        headers: {},
+        rawHeaders: [],
+        body: buildPlist({
+          accountInfo: {
+            appleId: "test@example.com",
+            address: {
+              firstName: "Test",
+              lastName: "User",
+            },
+          },
+          passwordToken: "token",
+          dsPersonId: "123",
+        }),
+      });
+
+    await authenticate(
+      "test@example.com",
+      "password",
+      undefined,
+      undefined,
+      "aabbccddeeff",
+    );
+
+    expect(appleRequest).toHaveBeenCalledTimes(4);
+    expect(vi.mocked(appleRequest).mock.calls[0][0].host).toBe(
+      "auth.itunes.apple.com",
+    );
+    expect(vi.mocked(appleRequest).mock.calls[3][0].host).toBe(
+      "buy.itunes.apple.com",
+    );
+    expect(vi.mocked(appleRequest).mock.calls[3][0].path).toContain(
+      "/WebObjects/MZFinance.woa/wa/authenticate",
+    );
+  });
 });
