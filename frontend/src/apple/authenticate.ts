@@ -38,17 +38,18 @@ export async function authenticate(
   preferredPod?: string,
 ): Promise<Account> {
   const initialCookies: Cookie[] = existingCookies ? [...existingCookies] : [];
+  const normalizedDeviceId = normalizeGuid(deviceId);
   let cookies: Cookie[] = [...initialCookies];
   let storeFront = "";
   let lastError: Error | null = null;
 
   const authEndpoints: URL[] = [];
   if (preferredPod) {
-    authEndpoints.push(withGuid(podAuthURL(preferredPod), deviceId));
+    authEndpoints.push(withGuid(podAuthURL(preferredPod), normalizedDeviceId));
   }
-  const bag = await fetchBag(deviceId);
-  addAuthEndpoint(authEndpoints, withGuid(bag.authURL, deviceId));
-  const fallbackEndpoint = withGuid(defaultAuthURL, deviceId);
+  const bag = await fetchBag(normalizedDeviceId);
+  addAuthEndpoint(authEndpoints, withGuid(bag.authURL, normalizedDeviceId));
+  const fallbackEndpoint = withGuid(defaultAuthURL, normalizedDeviceId);
   addAuthEndpoint(authEndpoints, fallbackEndpoint);
 
   traceLog(trace, 'auth-endpoints', {
@@ -93,7 +94,7 @@ export async function authenticate(
           appleId: email,
           attempt: code ? "2" : "4",
           createSession: "true",
-          guid: deviceId,
+          guid: normalizedDeviceId,
           password: code ? `${password}${code}` : password,
           rmp: "0",
           why: "signIn",
@@ -210,7 +211,7 @@ export async function authenticate(
           passwordToken: (dict.passwordToken as string) ?? "",
           directoryServicesIdentifier: String(dict.dsPersonId ?? ""),
           cookies,
-          deviceIdentifier: deviceId,
+          deviceIdentifier: normalizedDeviceId,
           pod,
         };
 
@@ -302,6 +303,10 @@ function addAuthEndpoint(endpoints: URL[], endpoint: URL): void {
 
 function podAuthURL(pod: string): string {
   return `https://${purchaseAPIHost(pod)}/WebObjects/MZFinance.woa/wa/authenticate`;
+}
+
+function normalizeGuid(deviceId: string): string {
+  return deviceId.replace(/[: ]/g, '').toUpperCase();
 }
 
 function isRedirectStatus(status: number): boolean {
