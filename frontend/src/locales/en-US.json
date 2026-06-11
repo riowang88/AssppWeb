@@ -478,6 +478,7 @@
       "redirectLocation": "Failed to retrieve redirect location",
       "emptyBody": "Authentication failed: server returned HTTP {{status}} with empty body",
       "unexpectedResponse": "Apple authentication service returned an unexpected response. Please try again shortly.",
+      "interactiveRequired": "Apple rejected the authentication request. Complete any Apple account verification prompt on your trusted device or at https://account.apple.com, then try again.",
       "missingAccountInfo": "Missing accountInfo in response",
       "missingAddress": "Missing address in response",
       "unknownReason": "Authentication failed for an unknown reason"

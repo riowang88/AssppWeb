@@ -139,6 +139,35 @@ describe("apple/authenticate", () => {
     expect(appleRequest).toHaveBeenCalledTimes(3);
   });
 
+  it("returns an interactive verification error after repeated Apple 403 empty responses", async () => {
+    vi.spyOn(window, "setTimeout").mockImplementation((handler: TimerHandler) => {
+      if (typeof handler === "function") handler();
+      return 0;
+    });
+    vi.mocked(fetchBag).mockResolvedValue({
+      authURL:
+        "https://buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/authenticate",
+    });
+    vi.mocked(appleRequest).mockResolvedValue({
+      status: 403,
+      statusText: "Forbidden",
+      headers: {},
+      rawHeaders: [],
+      body: "",
+    });
+
+    await expect(
+      authenticate(
+        "test@example.com",
+        "password",
+        undefined,
+        undefined,
+        "aabbccddeeff",
+      ),
+    ).rejects.toThrow("Apple rejected the authentication request");
+    expect(appleRequest).toHaveBeenCalledTimes(3);
+  });
+
   it("falls back to the legacy MZFinance endpoint when bag auth returns repeated HTML", async () => {
     vi.spyOn(window, "setTimeout").mockImplementation((handler: TimerHandler) => {
       if (typeof handler === "function") handler();

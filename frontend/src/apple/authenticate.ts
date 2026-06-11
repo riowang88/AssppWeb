@@ -18,7 +18,10 @@ export class AuthenticationError extends Error {
 }
 
 class TransientAuthResponseError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    public readonly status?: number,
+  ) {
     super(message);
     this.name = "TransientAuthResponseError";
   }
@@ -156,9 +159,9 @@ export async function authenticate(
 
         // Handle non-plist responses (e.g. 403 with empty body)
         if (!response.body.trim()) {
-          throw new PlistParseError(
+          throw new TransientAuthResponseError(
             i18n.t("errors.auth.emptyBody", { status: response.status }),
-            "empty",
+            response.status,
           );
         }
 
@@ -222,7 +225,9 @@ export async function authenticate(
         const error = e instanceof Error ? e : new Error(String(e));
         if (isTransientAuthResponseError(error)) {
           exhaustedTransientResponse = true;
-          lastError = new Error(i18n.t("errors.auth.unexpectedResponse"));
+          lastError = isForbiddenEmptyAuthResponse(error)
+            ? new Error(i18n.t("errors.auth.interactiveRequired"))
+            : new Error(i18n.t("errors.auth.unexpectedResponse"));
           traceLog(trace, 'auth-transient-error', {
             endpointIndex,
             attempt: currentAttempt,
@@ -263,6 +268,10 @@ function isTransientAuthResponseError(error: Error): boolean {
         error.kind === "non-plist" ||
         error.kind === "invalid-xml"))
   );
+}
+
+function isForbiddenEmptyAuthResponse(error: Error): boolean {
+  return error instanceof TransientAuthResponseError && error.status === 403;
 }
 
 function wait(ms: number): Promise<void> {

@@ -429,6 +429,7 @@
       "redirectLocation": "Не удалось получить адрес перенаправления",
       "emptyBody": "Ошибка аутентификации: сервер вернул HTTP {{status}} с пустым телом",
       "unexpectedResponse": "Служба аутентификации Apple вернула неожиданный ответ. Повторите попытку позже.",
+      "interactiveRequired": "Apple отклонила запрос аутентификации. Завершите проверку Apple ID на доверенном устройстве или на https://account.apple.com, затем повторите попытку.",
       "missingAccountInfo": "В ответе отсутствует accountInfo",
       "missingAddress": "В ответе отсутствует address",
       "unknownReason": "Аутентификация не удалась по неизвестной причине"

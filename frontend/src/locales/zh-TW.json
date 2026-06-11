@@ -429,6 +429,7 @@
       "redirectLocation": "無法取得重新導向位址",
       "emptyBody": "認證失敗：伺服器傳回 HTTP {{status}} 且回應主體為空",
       "unexpectedResponse": "Apple 認證服務暫時傳回非預期回應，請稍後再試。",
+      "interactiveRequired": "Apple 拒絕了本次認證請求。請先在受信任裝置或 https://account.apple.com 完成 Apple 帳號驗證提示，然後重試。",
       "missingAccountInfo": "回應中缺少 accountInfo",
       "missingAddress": "回應中缺少 address",
       "unknownReason": "未知原因導致認證失敗"
