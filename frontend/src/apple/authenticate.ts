@@ -106,6 +106,16 @@ export async function authenticate(
           "Content-Type": "application/x-www-form-urlencoded",
         };
 
+        traceLog(trace, 'auth-request-built', {
+          endpointIndex,
+          attempt: currentAttempt,
+          guidLength: normalizedDeviceId.length,
+          guidUppercase: normalizedDeviceId === normalizedDeviceId.toUpperCase(),
+          existingCookieCount: cookies.length,
+          authBodyLength: plistBody.length,
+          hasVerificationCode: Boolean(code),
+        });
+
         const response = await appleRequest({
           method: "POST",
           host: requestHost,

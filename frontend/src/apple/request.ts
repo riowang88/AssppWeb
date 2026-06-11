@@ -34,13 +34,29 @@ export async function appleRequest(
     "User-Agent": userAgent,
     ...opts.headers,
   };
+  let cookieHeader = "";
 
   if (opts.cookies?.length) {
-    const cookieHeader = buildCookieHeader(opts.cookies, url);
+    cookieHeader = buildCookieHeader(opts.cookies, url);
     if (cookieHeader) {
       headers["Cookie"] = cookieHeader;
     }
   }
+
+  traceLog(opts.trace, 'apple-request-start', {
+    stage: opts.stage,
+    method: opts.method,
+    host: opts.host,
+    path: safePath(opts.path),
+    requestBodyLength: opts.body?.length ?? 0,
+    requestBodyKind: opts.body ? classifyBody(opts.body) : 'empty',
+    requestHeaderNames: safeHeaderNames(headers),
+    hasCookieHeader: Boolean(cookieHeader),
+    inputCookieCount: opts.cookies?.length ?? 0,
+    matchedCookiePairCount: countCookiePairs(cookieHeader),
+    hasGuidQuery: hasQueryParam(opts.path, 'guid'),
+    guidQueryUppercase: isQueryParamUppercase(opts.path, 'guid'),
+  });
 
   const startedAt = performance.now();
   const resp = await libcurl.fetch(url, {
@@ -92,4 +108,32 @@ export async function appleRequest(
     rawHeaders: resp.raw_headers,
     body,
   };
+}
+
+function safeHeaderNames(headers: Record<string, string>): string[] {
+  return Object.keys(headers)
+    .map((key) => key.toLowerCase())
+    .filter((key) => key !== 'cookie')
+    .sort();
+}
+
+function countCookiePairs(cookieHeader: string): number {
+  if (!cookieHeader) return 0;
+  return cookieHeader.split(';').filter((item) => item.trim()).length;
+}
+
+function hasQueryParam(path: string, key: string): boolean {
+  return queryParams(path)?.has(key) ?? false;
+}
+
+function isQueryParamUppercase(path: string, key: string): boolean | undefined {
+  const value = queryParams(path)?.get(key);
+  if (!value) return undefined;
+  return value === value.toUpperCase();
+}
+
+function queryParams(path: string): URLSearchParams | undefined {
+  const query = path.split('?', 2)[1];
+  if (!query) return undefined;
+  return new URLSearchParams(query);
 }
