@@ -74,6 +74,7 @@ describe('apple/request', () => {
       guidQueryUppercase: true,
     });
     expect(startPayload.requestHeaderNames).toEqual([
+      'accept',
       'content-type',
       'user-agent',
       'x-token',

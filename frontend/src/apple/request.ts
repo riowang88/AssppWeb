@@ -31,6 +31,7 @@ export async function appleRequest(
 
   const url = `https://${opts.host}${opts.path}`;
   const headers: Record<string, string> = {
+    "Accept": "*/*",
     "User-Agent": userAgent,
     ...opts.headers,
   };
