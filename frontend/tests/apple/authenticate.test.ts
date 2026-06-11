@@ -20,7 +20,7 @@ describe("apple/authenticate", () => {
     vi.restoreAllMocks();
   });
 
-  it("sets guid query exactly once from bag endpoint", async () => {
+  it("sends guid in the auth body without adding it to the auth URL", async () => {
     vi.mocked(fetchBag).mockResolvedValue({
       authURL:
         "https://buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/authenticate?foo=1&guid=old-value",
@@ -54,8 +54,7 @@ describe("apple/authenticate", () => {
     const requestCall = vi.mocked(appleRequest).mock.calls[0][0];
     const endpoint = new URL(`https://${requestCall.host}${requestCall.path}`);
 
-    expect(endpoint.searchParams.get("guid")).toBe("AABBCCDDEEFF");
-    expect(endpoint.searchParams.getAll("guid")).toHaveLength(1);
+    expect(endpoint.searchParams.get("guid")).toBeNull();
     expect(endpoint.searchParams.get("foo")).toBe("1");
     expect(requestCall.headers?.["Content-Type"]).toBe(
       "application/x-www-form-urlencoded",

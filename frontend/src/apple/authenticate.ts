@@ -44,8 +44,8 @@ export async function authenticate(
 
   const authEndpoints: URL[] = [];
   const bag = await fetchBag(normalizedDeviceId);
-  addAuthEndpoint(authEndpoints, withGuid(bag.authURL, normalizedDeviceId));
-  const fallbackEndpoint = withGuid(defaultAuthURL, normalizedDeviceId);
+  addAuthEndpoint(authEndpoints, authEndpointURL(bag.authURL));
+  const fallbackEndpoint = authEndpointURL(defaultAuthURL);
   addAuthEndpoint(authEndpoints, fallbackEndpoint);
 
   traceLog(trace, 'auth-endpoints', {
@@ -291,12 +291,6 @@ function wait(ms: number): Promise<void> {
   });
 }
 
-function withGuid(rawURL: string, deviceId: string): URL {
-  const url = new URL(rawURL);
-  url.searchParams.set("guid", deviceId);
-  return url;
-}
-
 function sameEndpoint(a: URL, b: URL): boolean {
   return a.origin === b.origin && a.pathname === b.pathname;
 }
@@ -305,6 +299,12 @@ function addAuthEndpoint(endpoints: URL[], endpoint: URL): void {
   if (!endpoints.some((existing) => sameEndpoint(existing, endpoint))) {
     endpoints.push(endpoint);
   }
+}
+
+function authEndpointURL(rawURL: string): URL {
+  const url = new URL(rawURL);
+  url.searchParams.delete('guid');
+  return url;
 }
 
 function normalizeGuid(deviceId: string): string {
