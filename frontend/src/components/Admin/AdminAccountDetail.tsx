@@ -43,7 +43,7 @@ export default function AdminAccountDetail() {
         account.email,
         account.password,
         needsCode && code ? code : undefined,
-        undefined,
+        account.cookies,
         account.deviceIdentifier,
         undefined,
         account.pod,

@@ -4,7 +4,7 @@ import { extractAndMergeCookies } from './cookies';
 import { purchaseAPIHost } from './config';
 import { traceLog } from './trace';
 import i18n from '../i18n';
-import type { Account, Software } from '../types';
+import type { Account, Cookie, Software } from '../types';
 import type { TraceContext } from './trace';
 
 export class PurchaseError extends Error {
@@ -12,6 +12,7 @@ export class PurchaseError extends Error {
     message: string,
     public readonly code?: string,
     public readonly reauthenticationRequired: boolean = false,
+    public readonly updatedCookies?: Cookie[],
   ) {
     super(message);
     this.name = "PurchaseError";
@@ -130,6 +131,7 @@ async function purchaseWithParams(
           i18n.t("errors.purchase.passwordExpired"),
           failureType,
           true,
+          updatedCookies,
         );
       default: {
         if (customerMessage === "Your password has changed.") {
@@ -137,6 +139,7 @@ async function purchaseWithParams(
             i18n.t("errors.purchase.passwordExpired"),
             failureType,
             true,
+            updatedCookies,
           );
         }
         if (customerMessage === "Subscription Required") {

@@ -7,6 +7,7 @@ class TestPurchaseError extends Error {
   constructor(
     message: string,
     public readonly reauthenticationRequired: boolean,
+    public readonly updatedCookies?: Account["cookies"],
   ) {
     super(message);
   }
@@ -113,8 +114,11 @@ describe("useDownloadAction", () => {
   });
 
   it("reauthenticates and retries license acquisition once when the token expired", async () => {
+    const purchaseCookies = [
+      { name: "mz", value: "2", path: "/", httpOnly: true, secure: true },
+    ];
     mocks.purchaseApp
-      .mockRejectedValueOnce(new TestPurchaseError("expired", true))
+      .mockRejectedValueOnce(new TestPurchaseError("expired", true, purchaseCookies))
       .mockResolvedValueOnce({ updatedCookies: renewedAccount.cookies });
     mocks.authenticate.mockResolvedValueOnce(renewedAccount);
 
@@ -127,7 +131,7 @@ describe("useDownloadAction", () => {
       account.email,
       account.password,
       undefined,
-      undefined,
+      purchaseCookies,
       account.deviceIdentifier,
       expect.objectContaining({ traceId: expect.any(String) }),
       account.pod,
@@ -176,7 +180,7 @@ describe("useDownloadAction", () => {
       account.email,
       account.password,
       "123456",
-      undefined,
+      account.cookies,
       account.deviceIdentifier,
       expect.objectContaining({ traceId: expect.any(String) }),
       account.pod,

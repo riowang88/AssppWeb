@@ -145,12 +145,15 @@ export function useDownloadAction() {
         errorName: error instanceof Error ? error.name : typeof error,
         errorMessage: error instanceof Error ? error.message : String(error),
       });
+      const reauthenticationCookies =
+        (error as { updatedCookies?: typeof account.cookies }).updatedCookies ??
+        account.cookies;
 
       const renewed = await authenticate(
         account.email,
         account.password,
         reauthenticationCode,
-        undefined,
+        reauthenticationCookies,
         account.deviceIdentifier,
         childTrace(trace, 'authenticate'),
         account.pod,
