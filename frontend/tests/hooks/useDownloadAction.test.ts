@@ -128,10 +128,15 @@ describe("useDownloadAction", () => {
       undefined,
       undefined,
       account.deviceIdentifier,
+      expect.objectContaining({ traceId: expect.any(String) }),
     );
     expect(mocks.updateSession).toHaveBeenCalledWith(renewedAccount);
     expect(mocks.purchaseApp).toHaveBeenCalledTimes(2);
-    expect(mocks.purchaseApp).toHaveBeenLastCalledWith(renewedAccount, app);
+    expect(mocks.purchaseApp).toHaveBeenLastCalledWith(
+      renewedAccount,
+      app,
+      expect.objectContaining({ action: "purchase-retry" }),
+    );
     expect(mocks.updateCookies).toHaveBeenCalledWith(
       renewedAccount.email,
       renewedAccount.cookies,
@@ -171,6 +176,7 @@ describe("useDownloadAction", () => {
       "123456",
       undefined,
       account.deviceIdentifier,
+      expect.objectContaining({ traceId: expect.any(String) }),
     );
   });
 });

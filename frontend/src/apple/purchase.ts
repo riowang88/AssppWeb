@@ -1,9 +1,11 @@
-import type { Account, Software } from "../types";
-import { appleRequest } from "./request";
-import { buildPlist, parsePlist } from "./plist";
-import { extractAndMergeCookies } from "./cookies";
-import { purchaseAPIHost } from "./config";
-import i18n from "../i18n";
+import { appleRequest } from './request';
+import { buildPlist, parsePlist } from './plist';
+import { extractAndMergeCookies } from './cookies';
+import { purchaseAPIHost } from './config';
+import { traceLog } from './trace';
+import i18n from '../i18n';
+import type { Account, Software } from '../types';
+import type { TraceContext } from './trace';
 
 export class PurchaseError extends Error {
   constructor(
@@ -23,17 +25,19 @@ export function isPurchaseReauthenticationRequired(error: unknown): boolean {
 export async function purchaseApp(
   account: Account,
   app: Software,
+  trace?: TraceContext,
 ): Promise<{ updatedCookies: typeof account.cookies }> {
   if ((app.price ?? 0) > 0) {
     throw new PurchaseError(i18n.t("errors.purchase.paidNotSupported"));
   }
 
   try {
-    return await purchaseWithParams(account, app, "STDQ");
+    return await purchaseWithParams(account, app, "STDQ", trace);
   } catch (e) {
     // Rely on error code instead of translated message string to prevent matching issues
     if (e instanceof PurchaseError && e.code === "2059") {
-      return await purchaseWithParams(account, app, "GAME");
+      traceLog(trace, 'purchase-retry-game-params', { code: e.code });
+      return await purchaseWithParams(account, app, "GAME", trace);
     }
     throw e;
   }
@@ -43,6 +47,7 @@ async function purchaseWithParams(
   account: Account,
   app: Software,
   pricingParameters: string,
+  trace?: TraceContext,
 ): Promise<{ updatedCookies: typeof account.cookies }> {
   const deviceId = account.deviceIdentifier;
   const host = purchaseAPIHost(account.pod);
@@ -80,6 +85,8 @@ async function purchaseWithParams(
     headers,
     body: plistBody,
     cookies: account.cookies,
+    trace,
+    stage: `purchase:${pricingParameters}`,
   });
 
   const updatedCookies = extractAndMergeCookies(
@@ -88,6 +95,11 @@ async function purchaseWithParams(
   );
 
   if (!response.body.trim()) {
+    traceLog(trace, 'purchase-empty-body', {
+      pricingParameters,
+      host,
+      status: response.status,
+    });
     throw new PurchaseError(
       `Purchase failed: HTTP ${response.status} with empty body`,
       String(response.status),
@@ -99,7 +111,16 @@ async function purchaseWithParams(
   if (dict.failureType) {
     const failureType = String(dict.failureType);
     const customerMessage = dict.customerMessage as string | undefined;
-    console.warn("[Purchase] Apple error:", { failureType, customerMessage });
+    traceLog(trace, 'purchase-failure', {
+      pricingParameters,
+      host,
+      failureType,
+      customerMessage,
+      reauthenticationRequired:
+        failureType === "2034" ||
+        failureType === "2042" ||
+        customerMessage === "Your password has changed.",
+    });
     switch (failureType) {
       case "2059":
         throw new PurchaseError(i18n.t("errors.purchase.unavailable"), "2059");
@@ -150,8 +171,20 @@ async function purchaseWithParams(
   const status = dict.status as number | undefined;
 
   if (jingleDocType !== "purchaseSuccess" || status !== 0) {
+    traceLog(trace, 'purchase-unexpected-success-shape', {
+      pricingParameters,
+      host,
+      jingleDocType,
+      status,
+    });
     throw new PurchaseError(i18n.t("errors.purchase.failedGeneral"));
   }
+
+  traceLog(trace, 'purchase-success', {
+    pricingParameters,
+    host,
+    updatedCookieCount: updatedCookies.length,
+  });
 
   return { updatedCookies };
 }

@@ -1,9 +1,11 @@
-import type { Account, Cookie } from "../types";
-import { appleRequest } from "./request";
-import { buildPlist, parsePlist, PlistParseError } from "./plist";
-import { extractAndMergeCookies } from "./cookies";
-import { fetchBag, defaultAuthURL } from "./bag";
-import i18n from "../i18n";
+import { appleRequest } from './request';
+import { buildPlist, parsePlist, PlistParseError } from './plist';
+import { extractAndMergeCookies } from './cookies';
+import { fetchBag, defaultAuthURL } from './bag';
+import { safePath, traceLog } from './trace';
+import i18n from '../i18n';
+import type { Account, Cookie } from '../types';
+import type { TraceContext } from './trace';
 
 export class AuthenticationError extends Error {
   constructor(
@@ -27,7 +29,8 @@ export async function authenticate(
   password: string,
   code?: string,
   existingCookies?: Cookie[],
-  deviceId: string = "",
+  deviceId: string = '',
+  trace?: TraceContext,
 ): Promise<Account> {
   const initialCookies: Cookie[] = existingCookies ? [...existingCookies] : [];
   let cookies: Cookie[] = [...initialCookies];
@@ -42,6 +45,13 @@ export async function authenticate(
     authEndpoints.push(fallbackEndpoint);
   }
 
+  traceLog(trace, 'auth-endpoints', {
+    endpointCount: authEndpoints.length,
+    primaryHost: authEndpoints[0].hostname,
+    primaryPath: authEndpoints[0].pathname,
+    hasFallback: authEndpoints.length > 1,
+  });
+
   const maxAttempts = 3;
 
   for (let endpointIndex = 0; endpointIndex < authEndpoints.length; endpointIndex++) {
@@ -54,10 +64,23 @@ export async function authenticate(
 
     if (endpointIndex > 0) {
       cookies = [...initialCookies];
+      traceLog(trace, 'auth-fallback-endpoint', {
+        endpointIndex,
+        host: authEndpoint.hostname,
+        path: authEndpoint.pathname,
+      });
     }
 
     while (currentAttempt < maxAttempts && redirectAttempt <= 3) {
       currentAttempt++;
+      traceLog(trace, 'auth-attempt', {
+        endpointIndex,
+        attempt: currentAttempt,
+        redirectAttempt,
+        host: requestHost,
+        path: safePath(requestPath),
+        hasCode: Boolean(code),
+      });
 
       try {
         const body: Record<string, string> = {
@@ -82,6 +105,8 @@ export async function authenticate(
           headers,
           body: plistBody,
           cookies,
+          trace,
+          stage: 'authenticate',
         });
 
         cookies = extractAndMergeCookies(response.rawHeaders, cookies);
@@ -103,6 +128,14 @@ export async function authenticate(
         if (response.status === 302) {
           const location = response.headers["location"];
           if (!location) {
+            traceLog(trace, 'auth-redirect-missing-location', {
+              endpointIndex,
+              attempt: currentAttempt,
+              redirectAttempt,
+              host: requestHost,
+              path: safePath(requestPath),
+              status: response.status,
+            });
             throw new TransientAuthResponseError(
               i18n.t("errors.auth.redirectLocation"),
             );
@@ -112,6 +145,12 @@ export async function authenticate(
           requestPath = url.pathname + url.search;
           currentAttempt--;
           redirectAttempt++;
+          traceLog(trace, 'auth-redirect-follow', {
+            endpointIndex,
+            redirectAttempt,
+            host: requestHost,
+            path: safePath(requestPath),
+          });
           continue;
         }
 
@@ -131,6 +170,7 @@ export async function authenticate(
           !code &&
           dict.customerMessage === "MZFinance.BadLogin.Configurator_message"
         ) {
+          traceLog(trace, 'auth-requires-verification', { endpointIndex });
           throw new AuthenticationError(
             i18n.t("errors.auth.requiresVerification"),
             true,
@@ -167,6 +207,15 @@ export async function authenticate(
           pod,
         };
 
+        traceLog(trace, 'auth-success', {
+          endpointIndex,
+          storeFront: Boolean(storeFront),
+          hasPasswordToken: Boolean(account.passwordToken),
+          hasDsid: Boolean(account.directoryServicesIdentifier),
+          hasPod: Boolean(pod),
+          cookieCount: cookies.length,
+        });
+
         return account;
       } catch (e) {
         if (e instanceof AuthenticationError) throw e;
@@ -174,6 +223,13 @@ export async function authenticate(
         if (isTransientAuthResponseError(error)) {
           exhaustedTransientResponse = true;
           lastError = new Error(i18n.t("errors.auth.unexpectedResponse"));
+          traceLog(trace, 'auth-transient-error', {
+            endpointIndex,
+            attempt: currentAttempt,
+            errorName: error.name,
+            errorMessage: error.message,
+            willRetry: currentAttempt < maxAttempts,
+          });
           if (currentAttempt < maxAttempts) {
             await wait(250 * currentAttempt);
             continue;
@@ -181,6 +237,12 @@ export async function authenticate(
           break;
         }
         lastError = error;
+        traceLog(trace, 'auth-hard-error', {
+          endpointIndex,
+          attempt: currentAttempt,
+          errorName: error.name,
+          errorMessage: error.message,
+        });
         throw error;
       }
     }

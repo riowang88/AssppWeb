@@ -1,9 +1,11 @@
-import type { Account, Software, DownloadOutput, Sinf } from "../types";
-import { appleRequest } from "./request";
-import { buildPlist, parsePlist } from "./plist";
-import { extractAndMergeCookies } from "./cookies";
-import { storeAPIHost } from "./config";
-import i18n from "../i18n";
+import { appleRequest } from './request';
+import { buildPlist, parsePlist } from './plist';
+import { extractAndMergeCookies } from './cookies';
+import { storeAPIHost } from './config';
+import { safePath, traceLog } from './trace';
+import i18n from '../i18n';
+import type { Account, Software, DownloadOutput, Sinf } from '../types';
+import type { TraceContext } from './trace';
 
 export class DownloadError extends Error {
   constructor(
@@ -19,6 +21,7 @@ export async function getDownloadInfo(
   account: Account,
   app: Software,
   externalVersionId?: string,
+  trace?: TraceContext,
 ): Promise<{ output: DownloadOutput; updatedCookies: typeof account.cookies }> {
   const deviceId = account.deviceIdentifier;
 
@@ -28,6 +31,14 @@ export async function getDownloadInfo(
   let redirectAttempt = 0;
 
   while (redirectAttempt <= 3) {
+    traceLog(trace, 'download-info-attempt', {
+      host: requestHost,
+      path: safePath(requestPath),
+      pod: account.pod,
+      redirectAttempt,
+      hasExternalVersionId: Boolean(externalVersionId),
+    });
+
     const payload: Record<string, any> = {
       creditDisplay: "",
       guid: deviceId,
@@ -53,6 +64,8 @@ export async function getDownloadInfo(
       headers,
       body: plistBody,
       cookies,
+      trace,
+      stage: 'download-info',
     });
 
     cookies = extractAndMergeCookies(response.rawHeaders, cookies);
@@ -60,12 +73,22 @@ export async function getDownloadInfo(
     if (response.status === 302) {
       const location = response.headers["location"];
       if (!location) {
+        traceLog(trace, 'download-info-redirect-missing-location', {
+          host: requestHost,
+          path: safePath(requestPath),
+          status: response.status,
+        });
         throw new DownloadError(i18n.t("errors.download.redirectLocation"));
       }
       const url = new URL(location);
       requestHost = url.hostname;
       requestPath = url.pathname + url.search;
       redirectAttempt++;
+      traceLog(trace, 'download-info-redirect-follow', {
+        host: requestHost,
+        path: safePath(requestPath),
+        redirectAttempt,
+      });
       continue;
     }
 
@@ -74,6 +97,16 @@ export async function getDownloadInfo(
     if (dict.failureType) {
       const failureType = String(dict.failureType);
       const customerMessage = dict.customerMessage as string | undefined;
+      traceLog(trace, 'download-info-failure', {
+        host: requestHost,
+        failureType,
+        customerMessage,
+        tokenExpired:
+          failureType === "2034" ||
+          failureType === "2042" ||
+          customerMessage === "Your password has changed.",
+        licenseRequired: failureType === "9610",
+      });
       switch (failureType) {
         case "2034":
         case "2042":
@@ -105,23 +138,31 @@ export async function getDownloadInfo(
 
     const songList = dict.songList as Record<string, any>[] | undefined;
     if (!songList || songList.length === 0) {
+      traceLog(trace, 'download-info-no-items', { host: requestHost });
       throw new DownloadError(i18n.t("errors.download.noItems"));
     }
 
     const item = songList[0];
     const url = item.URL as string;
     if (!url) {
+      traceLog(trace, 'download-info-missing-url', { host: requestHost });
       throw new DownloadError(i18n.t("errors.download.missingUrl"));
     }
 
     const metadata = item.metadata as Record<string, any>;
     if (!metadata) {
+      traceLog(trace, 'download-info-missing-metadata', { host: requestHost });
       throw new DownloadError(i18n.t("errors.download.missingMetadata"));
     }
 
     const version = metadata.bundleShortVersionString as string;
     const bundleVersion = metadata.bundleVersion as string;
     if (!version || !bundleVersion) {
+      traceLog(trace, 'download-info-missing-version', {
+        host: requestHost,
+        hasVersion: Boolean(version),
+        hasBundleVersion: Boolean(bundleVersion),
+      });
       throw new DownloadError(i18n.t("errors.download.missingVersion"));
     }
 
@@ -148,6 +189,7 @@ export async function getDownloadInfo(
     }
 
     if (sinfs.length === 0) {
+      traceLog(trace, 'download-info-no-sinf', { host: requestHost });
       throw new DownloadError(i18n.t("errors.download.noSinf"));
     }
 
@@ -158,6 +200,14 @@ export async function getDownloadInfo(
     delete metadataDict.passwordToken;
     delete metadataDict["passwordToken"];
     const iTunesMetadata = base64FromString(buildPlist(metadataDict));
+
+    traceLog(trace, 'download-info-success', {
+      host: requestHost,
+      sinfCount: sinfs.length,
+      hasDownloadURL: Boolean(url),
+      hasMetadata: Boolean(iTunesMetadata),
+      updatedCookieCount: cookies.length,
+    });
 
     return {
       output: {

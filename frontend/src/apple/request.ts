@@ -1,7 +1,9 @@
-import { libcurl, initLibcurl } from "./libcurl-init";
-import { buildCookieHeader } from "./cookies";
-import { userAgent } from "./config";
-import type { Cookie } from "../types";
+import { libcurl, initLibcurl } from './libcurl-init';
+import { buildCookieHeader } from './cookies';
+import { classifyBody, safeBodyPreview, safePath, traceLog } from './trace';
+import { userAgent } from './config';
+import type { Cookie } from '../types';
+import type { TraceContext } from './trace';
 
 export interface AppleRequestOptions {
   host: string;
@@ -10,6 +12,8 @@ export interface AppleRequestOptions {
   headers?: Record<string, string>;
   body?: string;
   cookies?: Cookie[];
+  trace?: TraceContext;
+  stage?: string;
 }
 
 export interface AppleResponse {
@@ -38,11 +42,12 @@ export async function appleRequest(
     }
   }
 
+  const startedAt = performance.now();
   const resp = await libcurl.fetch(url, {
     method: opts.method,
     headers,
     body: opts.body,
-    redirect: "manual",
+    redirect: 'manual',
     _libcurl_http_version: 1.1,
   });
 
@@ -52,6 +57,23 @@ export async function appleRequest(
   }
 
   const body = await resp.text();
+  const durationMs = Math.round(performance.now() - startedAt);
+
+  traceLog(opts.trace, 'apple-request', {
+    stage: opts.stage,
+    method: opts.method,
+    host: opts.host,
+    path: safePath(opts.path),
+    status: resp.status,
+    statusText: resp.statusText,
+    contentType: responseHeaders['content-type'],
+    bodyLength: body.length,
+    bodyKind: classifyBody(body),
+    bodyPreview: safeBodyPreview(body),
+    durationMs,
+    isRedirect: resp.status >= 300 && resp.status < 400,
+    hasLocation: Boolean(responseHeaders.location),
+  });
 
   return {
     status: resp.status,
