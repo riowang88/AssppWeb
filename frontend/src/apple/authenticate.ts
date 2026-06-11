@@ -2,7 +2,6 @@ import { appleRequest } from './request';
 import { buildPlist, parsePlist, PlistParseError } from './plist';
 import { extractAndMergeCookies } from './cookies';
 import { fetchBag, defaultAuthURL } from './bag';
-import { purchaseAPIHost } from './config';
 import { safePath, traceLog } from './trace';
 import i18n from '../i18n';
 import type { Account, Cookie } from '../types';
@@ -44,9 +43,6 @@ export async function authenticate(
   let lastError: Error | null = null;
 
   const authEndpoints: URL[] = [];
-  if (preferredPod) {
-    authEndpoints.push(withGuid(podAuthURL(preferredPod), normalizedDeviceId));
-  }
   const bag = await fetchBag(normalizedDeviceId);
   addAuthEndpoint(authEndpoints, withGuid(bag.authURL, normalizedDeviceId));
   const fallbackEndpoint = withGuid(defaultAuthURL, normalizedDeviceId);
@@ -57,9 +53,10 @@ export async function authenticate(
     primaryHost: authEndpoints[0].hostname,
     primaryPath: authEndpoints[0].pathname,
     hasFallback: authEndpoints.length > 1,
+    hasPreferredPod: Boolean(preferredPod),
   });
 
-  const maxAttempts = 3;
+  const maxAttempts = 4;
 
   for (let endpointIndex = 0; endpointIndex < authEndpoints.length; endpointIndex++) {
     const authEndpoint = authEndpoints[endpointIndex];
@@ -92,10 +89,9 @@ export async function authenticate(
       try {
         const body: Record<string, string> = {
           appleId: email,
-          attempt: code ? "2" : "4",
-          createSession: "true",
+          attempt: String(currentAttempt),
           guid: normalizedDeviceId,
-          password: code ? `${password}${code}` : password,
+          password: `${password}${code?.replaceAll(' ', '') ?? ''}`,
           rmp: "0",
           why: "signIn",
         };
@@ -309,10 +305,6 @@ function addAuthEndpoint(endpoints: URL[], endpoint: URL): void {
   if (!endpoints.some((existing) => sameEndpoint(existing, endpoint))) {
     endpoints.push(endpoint);
   }
-}
-
-function podAuthURL(pod: string): string {
-  return `https://${purchaseAPIHost(pod)}/WebObjects/MZFinance.woa/wa/authenticate`;
 }
 
 function normalizeGuid(deviceId: string): string {
