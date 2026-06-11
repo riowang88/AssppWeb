@@ -48,6 +48,42 @@ describe("apple/bag", () => {
     expect(result.authURL).toBe(defaultAuthURL);
   });
 
+  it("falls back when authenticateAccount uses the incompatible SRP endpoint", async () => {
+    const xml = buildPlist({
+      urlBag: {
+        authenticateAccount: "https://auth.itunes.apple.com/auth/v1/native",
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => xml,
+      }),
+    );
+
+    const result = await fetchBag("aabbccddeeff");
+
+    expect(result.authURL).toBe(defaultAuthURL);
+  });
+
+  it("keeps non-SRP authenticateAccount URLs from the bag", async () => {
+    const xml = buildPlist({
+      authenticateAccount: "https://example.apple.com/authenticate",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => xml,
+      }),
+    );
+
+    const result = await fetchBag("aabbccddeeff");
+
+    expect(result.authURL).toBe("https://example.apple.com/authenticate");
+  });
+
   it("falls back when bag proxy returns non-OK", async () => {
     vi.stubGlobal(
       "fetch",

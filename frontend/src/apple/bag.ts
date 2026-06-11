@@ -44,9 +44,14 @@ export async function fetchBag(deviceId: string): Promise<BagOutput> {
       return { authURL: defaultAuthURL };
     }
 
-    // Apple requires /fast suffix on auth.itunes.apple.com endpoints
-    if (authURL.includes("auth.itunes.apple.com") && !authURL.endsWith("/fast")) {
-      authURL = authURL.replace(/\/?$/, "/fast");
+    // Apple's /auth/v1/native endpoint is SRP/GSA auth, not the legacy plist
+    // MZFinance flow used by this client. Real traces show plist posts there
+    // return HTML 404/empty 204, so fall back to the compatible endpoint.
+    if (authURL.includes("/auth/v1/")) {
+      console.warn(
+        "[Bag] authenticateAccount points to SRP endpoint, using legacy MZFinance endpoint",
+      );
+      return { authURL: defaultAuthURL };
     }
 
     return { authURL };
