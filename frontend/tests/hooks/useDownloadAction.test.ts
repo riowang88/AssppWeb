@@ -79,6 +79,7 @@ describe("useDownloadAction", () => {
     directoryServicesIdentifier: "old-dsid",
     cookies: [],
     deviceIdentifier: "aabbccddeeff",
+    pod: "33",
   };
 
   const renewedAccount: Account = {
@@ -129,6 +130,7 @@ describe("useDownloadAction", () => {
       undefined,
       account.deviceIdentifier,
       expect.objectContaining({ traceId: expect.any(String) }),
+      account.pod,
     );
     expect(mocks.updateSession).toHaveBeenCalledWith(renewedAccount);
     expect(mocks.purchaseApp).toHaveBeenCalledTimes(2);
@@ -177,6 +179,7 @@ describe("useDownloadAction", () => {
       undefined,
       account.deviceIdentifier,
       expect.objectContaining({ traceId: expect.any(String) }),
+      account.pod,
     );
   });
 });

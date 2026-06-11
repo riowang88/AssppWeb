@@ -45,6 +45,8 @@ export default function AdminAccountDetail() {
         needsCode && code ? code : undefined,
         undefined,
         account.deviceIdentifier,
+        undefined,
+        account.pod,
       );
       await saveAccount(renewed);
       setAccount(renewed);

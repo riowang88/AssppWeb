@@ -2,6 +2,7 @@ import { appleRequest } from './request';
 import { buildPlist, parsePlist, PlistParseError } from './plist';
 import { extractAndMergeCookies } from './cookies';
 import { fetchBag, defaultAuthURL } from './bag';
+import { purchaseAPIHost } from './config';
 import { safePath, traceLog } from './trace';
 import i18n from '../i18n';
 import type { Account, Cookie } from '../types';
@@ -34,6 +35,7 @@ export async function authenticate(
   existingCookies?: Cookie[],
   deviceId: string = '',
   trace?: TraceContext,
+  preferredPod?: string,
 ): Promise<Account> {
   const initialCookies: Cookie[] = existingCookies ? [...existingCookies] : [];
   let cookies: Cookie[] = [...initialCookies];
@@ -41,12 +43,13 @@ export async function authenticate(
   let lastError: Error | null = null;
 
   const authEndpoints: URL[] = [];
-  const bag = await fetchBag(deviceId);
-  authEndpoints.push(withGuid(bag.authURL, deviceId));
-  const fallbackEndpoint = withGuid(defaultAuthURL, deviceId);
-  if (!sameEndpoint(authEndpoints[0], fallbackEndpoint)) {
-    authEndpoints.push(fallbackEndpoint);
+  if (preferredPod) {
+    authEndpoints.push(withGuid(podAuthURL(preferredPod), deviceId));
   }
+  const bag = await fetchBag(deviceId);
+  addAuthEndpoint(authEndpoints, withGuid(bag.authURL, deviceId));
+  const fallbackEndpoint = withGuid(defaultAuthURL, deviceId);
+  addAuthEndpoint(authEndpoints, fallbackEndpoint);
 
   traceLog(trace, 'auth-endpoints', {
     endpointCount: authEndpoints.length,
@@ -289,6 +292,16 @@ function withGuid(rawURL: string, deviceId: string): URL {
 
 function sameEndpoint(a: URL, b: URL): boolean {
   return a.origin === b.origin && a.pathname === b.pathname;
+}
+
+function addAuthEndpoint(endpoints: URL[], endpoint: URL): void {
+  if (!endpoints.some((existing) => sameEndpoint(existing, endpoint))) {
+    endpoints.push(endpoint);
+  }
+}
+
+function podAuthURL(pod: string): string {
+  return `https://${purchaseAPIHost(pod)}/WebObjects/MZFinance.woa/wa/authenticate`;
 }
 
 function isRedirectStatus(status: number): boolean {

@@ -153,6 +153,7 @@ export function useDownloadAction() {
         undefined,
         account.deviceIdentifier,
         childTrace(trace, 'authenticate'),
+        account.pod,
       );
       await updateSession(renewed);
       traceLog(trace, 'license-session-updated', {

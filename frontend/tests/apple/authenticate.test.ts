@@ -68,6 +68,47 @@ describe("apple/authenticate", () => {
     expect(requestBody.createSession).toBe("true");
   });
 
+  it("uses the stored account pod endpoint before bag fallback when provided", async () => {
+    vi.mocked(fetchBag).mockResolvedValue({
+      authURL:
+        "https://buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/authenticate",
+    });
+    vi.mocked(appleRequest).mockResolvedValue({
+      status: 200,
+      statusText: "OK",
+      headers: {},
+      rawHeaders: [],
+      body: buildPlist({
+        accountInfo: {
+          appleId: "test@example.com",
+          address: {
+            firstName: "Test",
+            lastName: "User",
+          },
+        },
+        passwordToken: "token",
+        dsPersonId: "123",
+      }),
+    });
+
+    await authenticate(
+      "test@example.com",
+      "password",
+      undefined,
+      undefined,
+      "aabbccddeeff",
+      undefined,
+      "33",
+    );
+
+    expect(vi.mocked(appleRequest).mock.calls[0][0].host).toBe(
+      "p33-buy.itunes.apple.com",
+    );
+    expect(vi.mocked(appleRequest).mock.calls[0][0].path).toContain(
+      "/WebObjects/MZFinance.woa/wa/authenticate",
+    );
+  });
+
   it("retries the observed Apple HTML 503 response and then succeeds", async () => {
     vi.spyOn(window, "setTimeout").mockImplementation((handler: TimerHandler) => {
       if (typeof handler === "function") handler();
