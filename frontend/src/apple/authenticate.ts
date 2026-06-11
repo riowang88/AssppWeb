@@ -1,6 +1,6 @@
 import type { Account, Cookie } from "../types";
 import { appleRequest } from "./request";
-import { buildPlist, parsePlist } from "./plist";
+import { buildPlist, parsePlist, PlistParseError } from "./plist";
 import { extractAndMergeCookies } from "./cookies";
 import { fetchBag, defaultAuthURL } from "./bag";
 import i18n from "../i18n";
@@ -39,8 +39,9 @@ export async function authenticate(
 
   let currentAttempt = 0;
   let redirectAttempt = 0;
+  const maxAttempts = 3;
 
-  while (currentAttempt < 2 && redirectAttempt <= 3) {
+  while (currentAttempt < maxAttempts && redirectAttempt <= 3) {
     currentAttempt++;
 
     try {
@@ -99,8 +100,9 @@ export async function authenticate(
 
       // Handle non-plist responses (e.g. 403 with empty body)
       if (!response.body.trim()) {
-        throw new Error(
+        throw new PlistParseError(
           i18n.t("errors.auth.emptyBody", { status: response.status }),
+          "empty",
         );
       }
 
@@ -151,9 +153,33 @@ export async function authenticate(
       return account;
     } catch (e) {
       if (e instanceof AuthenticationError) throw e;
-      lastError = e instanceof Error ? e : new Error(String(e));
+      const error = e instanceof Error ? e : new Error(String(e));
+      if (isTransientAuthResponseError(error)) {
+        lastError = new Error(i18n.t("errors.auth.unexpectedResponse"));
+        if (currentAttempt < maxAttempts) {
+          await wait(250 * currentAttempt);
+          continue;
+        }
+      } else {
+        lastError = error;
+      }
     }
   }
 
   throw lastError ?? new Error(i18n.t("errors.auth.unknownReason"));
+}
+
+function isTransientAuthResponseError(error: Error): boolean {
+  return (
+    error instanceof PlistParseError &&
+    (error.kind === "empty" ||
+      error.kind === "non-plist" ||
+      error.kind === "invalid-xml")
+  );
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 }

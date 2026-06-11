@@ -3,7 +3,10 @@ import { useAccounts } from './useAccounts';
 import { useToastStore } from '../store/toast';
 import { useDownloadsStore } from '../store/downloads';
 import { getDownloadInfo } from '../apple/download';
-import { purchaseApp } from '../apple/purchase';
+import {
+  isPurchaseReauthenticationRequired,
+  purchaseApp,
+} from '../apple/purchase';
 import { authenticate } from '../apple/authenticate';
 import { apiGet, apiPost } from '../api/client';
 import { accountHash } from '../utils/account';
@@ -12,7 +15,7 @@ import { getAccountContext } from '../utils/toast';
 import type { Account, AccountSummary, Software } from '../types';
 
 export function useDownloadAction() {
-  const { getDownloadContext, updateCookies } = useAccounts();
+  const { getDownloadContext, updateCookies, updateSession } = useAccounts();
   const addToast = useToastStore((s) => s.addToast);
   const fetchTasks = useDownloadsStore((s) => s.fetchTasks);
   const { t } = useTranslation();
@@ -71,33 +74,52 @@ export function useDownloadAction() {
     );
   }
 
-  async function acquireLicense(account: Account, app: Software) {
+  async function acquireLicense(
+    account: Account,
+    app: Software,
+    reauthenticationCode?: string,
+  ) {
     const ctx = getAccountContext(account, t);
     const appName = app.name;
-
-    let currentAccount = account;
-    try {
-      const renewed = await authenticate(
-        account.email,
-        account.password,
-        undefined,
-        undefined,
-        account.deviceIdentifier,
-      );
-      await updateCookies(renewed.email, renewed.cookies);
-      currentAccount = renewed;
-    } catch {
-      // Ignore — proceed with existing token
-    }
-
-    const result = await purchaseApp(currentAccount, app);
-    await updateCookies(currentAccount.email, result.updatedCookies);
+    const result = await purchaseWithReauthentication(
+      account,
+      app,
+      reauthenticationCode,
+    );
+    await updateCookies(result.account.email, result.updatedCookies);
 
     addToast(
       t('toast.msg', { appName, ...ctx }),
       'success',
       t('toast.title.licenseSuccess'),
     );
+  }
+
+  async function purchaseWithReauthentication(
+    account: Account,
+    app: Software,
+    reauthenticationCode?: string,
+  ) {
+    try {
+      const result = await purchaseApp(account, app);
+      return { account, updatedCookies: result.updatedCookies };
+    } catch (error) {
+      if (!isPurchaseReauthenticationRequired(error)) {
+        throw error;
+      }
+
+      const renewed = await authenticate(
+        account.email,
+        account.password,
+        reauthenticationCode,
+        undefined,
+        account.deviceIdentifier,
+      );
+      await updateSession(renewed);
+
+      const result = await purchaseApp(renewed, app);
+      return { account: renewed, updatedCookies: result.updatedCookies };
+    }
   }
 
   function toastDownloadError(account: Account | AccountSummary, app: Software, error: unknown) {

@@ -9,6 +9,7 @@ interface AccountsState {
   loadAccounts: () => Promise<void>;
   getDownloadContext: (email: string) => Promise<Account>;
   updateCookies: (email: string, cookies: Account['cookies']) => Promise<void>;
+  updateSession: (account: Account) => Promise<void>;
 }
 
 export const useAccountsStore = create<AccountsState>((set) => ({
@@ -35,5 +36,29 @@ export const useAccountsStore = create<AccountsState>((set) => ({
 
   updateCookies: async (email: string, cookies: Account['cookies']) => {
     await apiPatch(`/api/accounts/${encodeURIComponent(email)}/cookies`, { cookies });
+  },
+
+  updateSession: async (account: Account) => {
+    const {
+      appleId,
+      store,
+      firstName,
+      lastName,
+      passwordToken,
+      directoryServicesIdentifier,
+      cookies,
+      pod,
+    } = account;
+
+    await apiPatch(`/api/accounts/${encodeURIComponent(account.email)}/session`, {
+      appleId,
+      store,
+      firstName,
+      lastName,
+      passwordToken,
+      directoryServicesIdentifier,
+      cookies,
+      pod,
+    });
   },
 }));

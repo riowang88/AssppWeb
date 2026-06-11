@@ -70,6 +70,34 @@ export function updateAccountCookies(email: string, cookies: Account["cookies"])
   return true;
 }
 
+export function updateAccountSession(
+  email: string,
+  session: Pick<
+    Account,
+    | "appleId"
+    | "store"
+    | "firstName"
+    | "lastName"
+    | "passwordToken"
+    | "directoryServicesIdentifier"
+    | "cookies"
+    | "pod"
+  >,
+): boolean {
+  const account = accounts.find((a) => a.email === email);
+  if (!account) return false;
+  account.appleId = session.appleId;
+  account.store = session.store;
+  account.firstName = session.firstName;
+  account.lastName = session.lastName;
+  account.passwordToken = session.passwordToken;
+  account.directoryServicesIdentifier = session.directoryServicesIdentifier;
+  account.cookies = session.cookies;
+  account.pod = session.pod;
+  persist();
+  return true;
+}
+
 export function encryptPassword(password: string): { iv: string; ciphertext: string } {
   const key = Buffer.from(getEncryptionKey(), "hex");
   const iv = randomBytes(12);

@@ -9,10 +9,15 @@ export class PurchaseError extends Error {
   constructor(
     message: string,
     public readonly code?: string,
+    public readonly reauthenticationRequired: boolean = false,
   ) {
     super(message);
     this.name = "PurchaseError";
   }
+}
+
+export function isPurchaseReauthenticationRequired(error: unknown): boolean {
+  return error instanceof PurchaseError && error.reauthenticationRequired;
 }
 
 export async function purchaseApp(
@@ -92,9 +97,9 @@ async function purchaseWithParams(
   const dict = parsePlist(response.body) as Record<string, any>;
 
   if (dict.failureType) {
-    console.warn("[Purchase] Apple error:", JSON.stringify(dict, null, 2));
     const failureType = String(dict.failureType);
     const customerMessage = dict.customerMessage as string | undefined;
+    console.warn("[Purchase] Apple error:", { failureType, customerMessage });
     switch (failureType) {
       case "2059":
         throw new PurchaseError(i18n.t("errors.purchase.unavailable"), "2059");
@@ -103,12 +108,14 @@ async function purchaseWithParams(
         throw new PurchaseError(
           i18n.t("errors.purchase.passwordExpired"),
           failureType,
+          true,
         );
       default: {
         if (customerMessage === "Your password has changed.") {
           throw new PurchaseError(
             i18n.t("errors.purchase.passwordExpired"),
             failureType,
+            true,
           );
         }
         if (customerMessage === "Subscription Required") {

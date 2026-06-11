@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildPlist, parsePlist } from "../../src/apple/plist";
+import { buildPlist, parsePlist, PlistParseError } from "../../src/apple/plist";
 
 describe("apple/plist", () => {
   describe("buildPlist", () => {
@@ -67,6 +67,23 @@ describe("apple/plist", () => {
 
       expect(parsed.email).toBe("test@test.com");
       expect(parsed.value).toBe("hello world");
+    });
+
+    it("classifies the Apple HTML 404/503 samples as invalid XML plist responses", () => {
+      const html = `<html>
+<head><title>503 Service Temporarily Unavailable`;
+
+      expect(() => parsePlist(html)).toThrow(PlistParseError);
+
+      try {
+        parsePlist(html);
+      } catch (error) {
+        expect(error).toBeInstanceOf(PlistParseError);
+        expect((error as PlistParseError).kind).toBe("invalid-xml");
+        expect((error as Error).message).not.toContain(
+          "root element is not <plist>",
+        );
+      }
     });
   });
 });

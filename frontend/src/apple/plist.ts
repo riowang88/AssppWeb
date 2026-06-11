@@ -43,16 +43,39 @@ function escapeXml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+export type PlistParseErrorKind = "empty" | "non-plist" | "invalid-xml";
+
+export class PlistParseError extends Error {
+  constructor(
+    message: string,
+    public readonly kind: PlistParseErrorKind,
+  ) {
+    super(message);
+    this.name = "PlistParseError";
+  }
+}
+
 // Native browser plist parser — avoids @xmldom/xmldom bundling issues
 export function parsePlist(xml: string): any {
+  if (!xml.trim()) {
+    throw new PlistParseError("Invalid plist: empty response", "empty");
+  }
+
   const doc = new DOMParser().parseFromString(xml, "text/xml");
+  if (doc.getElementsByTagName("parsererror").length > 0) {
+    throw new PlistParseError("Invalid plist: malformed XML", "invalid-xml");
+  }
+
   const root = doc.documentElement;
   if (root.nodeName !== "plist") {
-    throw new Error("Invalid plist: root element is not <plist>");
+    throw new PlistParseError(
+      "Apple returned a non-plist response",
+      "non-plist",
+    );
   }
   const firstChild = root.firstElementChild;
   if (!firstChild) {
-    throw new Error("Invalid plist: empty <plist> element");
+    throw new PlistParseError("Invalid plist: empty <plist> element", "empty");
   }
   return parseNode(firstChild);
 }

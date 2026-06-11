@@ -8,6 +8,7 @@ import { useDownloadAction } from "../../hooks/useDownloadAction";
 import { useSettingsStore } from "../../store/settings";
 import { useToastStore } from "../../store/toast";
 import { lookupApp } from "../../api/search";
+import { AuthenticationError } from "../../apple/authenticate";
 import { listVersions } from "../../apple/versionFinder";
 import { countryCodeMap, storeIdToCountry } from "../../apple/config";
 import { firstAccountCountry } from "../../utils/account";
@@ -33,6 +34,8 @@ export default function AddDownload() {
   const [app, setApp] = useState<Software | null>(null);
   const [versions, setVersions] = useState<string[]>([]);
   const [selectedVersion, setSelectedVersion] = useState("");
+  const [licenseCode, setLicenseCode] = useState("");
+  const [licenseNeedsCode, setLicenseNeedsCode] = useState(false);
   const [step, setStep] = useState<"lookup" | "ready" | "versions">("lookup");
   const [loadingAction, setLoadingAction] = useState<
     "lookup" | "license" | "versions" | "download" | null
@@ -106,9 +109,20 @@ export default function AddDownload() {
     setLoadingAction("license");
     try {
       const fullAccount = await getDownloadContext(account.email);
-      await acquireLicense(fullAccount, app);
+      await acquireLicense(
+        fullAccount,
+        app,
+        licenseNeedsCode && licenseCode ? licenseCode : undefined,
+      );
+      setLicenseNeedsCode(false);
+      setLicenseCode("");
     } catch (e) {
-      if (account) toastLicenseError(account, app, e);
+      if (e instanceof AuthenticationError && e.codeRequired) {
+        setLicenseNeedsCode(true);
+        addToast(e.message, "error");
+      } else if (account) {
+        toastLicenseError(account, app, e);
+      }
     } finally {
       setLoadingAction(null);
     }
@@ -265,6 +279,26 @@ export default function AddDownload() {
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {licenseNeedsCode && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t("accounts.addForm.code")}
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  value={licenseCode}
+                  onChange={(e) => setLicenseCode(e.target.value)}
+                  placeholder={t("accounts.addForm.codePlaceholder")}
+                  className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 dark:disabled:bg-gray-800/50 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                  disabled={isLoading}
+                  autoFocus
+                />
               </div>
             )}
 

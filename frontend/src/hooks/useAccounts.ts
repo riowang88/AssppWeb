@@ -1,7 +1,14 @@
 import { useAccountsStore } from '../store/accounts';
 
 export function useAccounts() {
-  const { accounts, loading, loadAccounts, getDownloadContext, updateCookies } =
+  const {
+    accounts,
+    loading,
+    loadAccounts,
+    getDownloadContext,
+    updateCookies,
+    updateSession,
+  } =
     useAccountsStore();
 
   function getAccount(email: string) {
@@ -15,5 +22,6 @@ export function useAccounts() {
     getAccount,
     getDownloadContext,
     updateCookies,
+    updateSession,
   };
 }
